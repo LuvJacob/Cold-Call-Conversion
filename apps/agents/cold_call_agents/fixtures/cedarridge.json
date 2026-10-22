@@ -1,0 +1,80 @@
+{
+  "sample": true,
+  "key": "cedarridge",
+  "description": "Identity unsure: the profile lookup returns a person with the same name at a different company.",
+  "prospect": {
+    "prospect_id": "sample-cedarridge",
+    "name": "Tomas Ibarra",
+    "company": "Cedar Ridge Foods Sample Co",
+    "role": "Head of Procurement",
+    "company_domain": "cedarridge-sample.example",
+    "notes": "SAMPLE: fictional prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Tomas Ibarra",
+      "company": "Redwood Packaging Sample Inc",
+      "title": "Procurement Lead",
+      "start_date": "January 2022",
+      "source": {
+        "title": "Tomas Ibarra profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/tomas-ibarra",
+        "date": "2026-06-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Cedar Ridge Foods Sample Co",
+      "domain": "cedarridge-sample.example",
+      "industry": "Food production",
+      "employee_count": "650",
+      "source": {
+        "title": "Cedar Ridge Foods company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/cedar-ridge-foods",
+        "date": "2026-06-01"
+      }
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": ["about"],
+      "title": "About Cedar Ridge Foods (sample)",
+      "url": "https://cedarridge-sample.example/about",
+      "publisher": "Cedar Ridge Foods (company site, sample)",
+      "published_date": "2026-05-20",
+      "content": "Cedar Ridge Foods Sample Co has 650 employees across two plants.",
+      "claims": [
+        {"subject": "company", "key": "employee_count", "label": "Company size", "text": "About 650 employees across two plants.", "value": "650"}
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": ["news"],
+      "title": "Cedar Ridge Foods upgrades a plant (sample)",
+      "url": "https://sample-food-industry.example/cedar-ridge-upgrade",
+      "publisher": "Sample Food Industry Review",
+      "published_date": "2026-09-15",
+      "content": "Cedar Ridge Foods Sample Co is upgrading one of its two plants.",
+      "claims": [
+        {"subject": "company", "key": "recent_news.plant_upgrade", "label": "Recent news", "text": "Is upgrading one of its two plants.", "value": "plant upgrade"}
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": ["talks"],
+      "title": "Packaging expo speakers (sample)",
+      "url": "https://sample-packaging-expo.example/speakers",
+      "publisher": "Sample Packaging Expo",
+      "published_date": "2026-04-11",
+      "content": "Tomas Ibarra of Redwood Packaging Sample Inc spoke about packaging sourcing.",
+      "claims": [
+        {"subject": "person", "key": "recent_talk.expo", "label": "Recent talk", "text": "Spoke about packaging sourcing at an expo.", "value": "expo talk"}
+      ]
+    }
+  ]
+}

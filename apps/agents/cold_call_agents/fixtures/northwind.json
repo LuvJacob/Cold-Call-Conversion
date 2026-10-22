@@ -1,0 +1,81 @@
+{
+  "sample": true,
+  "key": "northwind",
+  "description": "Clean case: role and company size each confirmed by two independent sources.",
+  "prospect": {
+    "prospect_id": "sample-northwind",
+    "name": "Dana Reyes",
+    "company": "Northwind Logistics Sample Inc",
+    "role": "VP of Operations",
+    "company_domain": "northwind-sample.example",
+    "notes": "SAMPLE: fictional prospect.",
+    "seller_offering": "Backup and recovery software (sample)"
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Dana Reyes",
+      "company": "Northwind Logistics Sample Inc",
+      "title": "VP of Operations",
+      "start_date": "April 2023",
+      "source": {
+        "title": "Dana Reyes profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/dana-reyes",
+        "date": "2026-08-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Northwind Logistics Sample Inc",
+      "domain": "northwind-sample.example",
+      "industry": "Logistics",
+      "employee_count": "1,200",
+      "source": {
+        "title": "Northwind Logistics company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/northwind-logistics",
+        "date": "2026-08-01"
+      }
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": ["about"],
+      "title": "About Northwind Logistics (sample)",
+      "url": "https://northwind-sample.example/about",
+      "publisher": "Northwind Logistics (company site, sample)",
+      "published_date": "2026-06-10",
+      "content": "Northwind Logistics Sample Inc runs six regional distribution centers and employs 1,200 people.",
+      "claims": [
+        {"subject": "company", "key": "employee_count", "label": "Company size", "text": "About 1,200 employees across six regional distribution centers.", "value": "1,200"}
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": ["news"],
+      "title": "Northwind opens two new distribution centers (sample)",
+      "url": "https://sample-logistics-weekly.example/northwind-expansion",
+      "publisher": "Sample Logistics Weekly",
+      "published_date": "2026-09-02",
+      "content": "Northwind Logistics Sample Inc announced two additional distribution centers as part of a fictional expansion plan.",
+      "claims": [
+        {"subject": "company", "key": "recent_news.expansion", "label": "Recent news", "text": "Announced two additional distribution centers in an expansion plan.", "value": "two new distribution centers"}
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": ["talks"],
+      "title": "Summit speaker: Dana Reyes (sample)",
+      "url": "https://sample-supply-summit.example/speakers/dana-reyes",
+      "publisher": "Sample Supply Chain Summit",
+      "published_date": "2026-07-15",
+      "content": "Dana Reyes, VP of Operations at Northwind Logistics Sample Inc, spoke about backup and recovery across sites.",
+      "claims": [
+        {"subject": "person", "key": "current_role", "label": "Current role", "text": "VP of Operations at Northwind Logistics.", "value": "VP of Operations"},
+        {"subject": "person", "key": "recent_talk.summit", "label": "Recent talk", "text": "Spoke at a supply chain summit about backup and recovery across sites.", "value": "summit talk on backup and recovery"}
+      ]
+    }
+  ]
+}
