@@ -50,7 +50,7 @@ Each person owns one lane. Build only inside your lane; if you need something ch
 
 ### Lane A: Integration and MVP (Jacob)
 
-- **Does:** runs the timeline and task assignments; owns this repo, reviews and merges every PR; maintains the low-fi MVP; makes the system diagrams and architecture docs; leads the final demo and presentation.
+- **Does:** runs the timeline and task assignments; owns this repo and reviews and merges PRs (unless he has said otherwise, see Team workflow); maintains the low-fi MVP; makes the system diagrams and architecture docs; leads the final demo and presentation.
 - **First deliverable:** architecture diagram tied to the [MVP repo](https://github.com/LuvJacob/Cold-Call-Conversion-rx), so every lane builds toward the same picture.
 - **Does not:** write lane features. Jacob decides scope and settles overlaps between lanes.
 
@@ -93,13 +93,13 @@ James (agents produce briefings) --> Srikar (backend stores & serves them) --> A
 - **B to C:** James and Srikar agree on the briefing format and how the backend calls the agents.
 - **C to D:** Srikar and Aanand agree on the API contract before building against it.
 - **E to everyone:** Joseph's findings decide which briefing fields matter most.
-- **Everyone to A:** all work merges through Jacob.
+- **Everyone to A:** all work merges through Jacob, unless he has said otherwise.
 
 ## Team workflow
 
 - Branch from the latest `main`, one branch per feature, named after your lane (e.g. `agents/briefing-format`, `frontend/carousel`).
 - Open small PRs that say what changed, how you tested it, and what it depends on.
-- Jacob approves merges. Keep `main` runnable.
+- Jacob approves merges unless he has said otherwise. When Jacob agrees, a lane owner may merge their own PRs without his review. Keep `main` runnable.
 - Changes to shared interfaces (briefing format, API contracts) are agreed between the affected owners before anyone edits them.
 - Use sample data until real connections are ready, and label it clearly as sample data.
 
