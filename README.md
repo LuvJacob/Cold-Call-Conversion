@@ -4,7 +4,7 @@ An agentic AI sales assistant that researches prospects before the call, so B2B 
 
 ## Project status
 
-This repository is new. Product scope, team roles, and the challenge submission are defined. A rough low-fidelity MVP exists in a **separate repository** (link coming) and is used to demonstrate the core concept and guide the build here.
+This repository is new. Product scope, team roles, and the challenge submission are defined. A rough low-fidelity MVP exists in a **separate repository**: [Cold-Call-Conversion-rx](https://github.com/LuvJacob/Cold-Call-Conversion-rx). It is and is used to demonstrate the core concept and guide the build here.
 
 Next up: agree on the agent input/output format and API contracts, then start the backend, agent, and frontend lanes in parallel.
 
@@ -51,7 +51,7 @@ Each person owns one lane. Build only inside your lane; if you need something ch
 ### Lane A: Integration and MVP (Jacob)
 
 - **Does:** runs the timeline and task assignments; owns this repo, reviews and merges every PR; maintains the low-fi MVP; makes the system diagrams and architecture docs; leads the final demo and presentation.
-- **First deliverable:** architecture diagram plus a link to the MVP repo, so every lane builds toward the same picture.
+- **First deliverable:** architecture diagram tied to the [MVP repo](https://github.com/LuvJacob/Cold-Call-Conversion-rx), so every lane builds toward the same picture.
 - **Does not:** write lane features. Jacob decides scope and settles overlaps between lanes.
 
 ### Lane B: AI agents (James)
