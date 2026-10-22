@@ -13,12 +13,37 @@ These are the runtime agents inside the product (running on Gemini). They are se
 
 > **Note:** the briefing format and the backend interface in this doc are **proposals**. Nothing is built against them until Srikar (and Joseph, for the fields) agree.
 
-## Overview
+## Where the agents run
+
+This follows Aanand's system architecture diagram:
+
+```
+Seller -> Next.js calling workspace (Supabase Auth) <-> FastAPI backend -> PostgreSQL
+                                                             |
+                                                             v
+                                                       Research queue
+                                                             |
+                                                             v
+                                                  Python research worker   -> PostgreSQL
+                                                             |
+                                                             v
+                                           Research and verification agents
+                                                  |                  |
+                                                  v                  v
+                                             Gemini API   Approved search and
+                                                          information sources
+```
+
+- The agents are **Python** code that runs inside the **research worker**. Lane B owns the agents; the worker process and queue setup are shared with Lane C (see open questions).
+- The FastAPI backend doesn't call the agents directly. It puts one research job per prospect on the **research queue**. The worker picks up the job, runs the agents, and saves the briefing to **PostgreSQL**.
+- The frontend never talks to the agents or Gemini. It reads briefings through the backend.
+
+## The agents
 
 MVP: 1 orchestrator + 4 sub-agents.
 
 ```
-Backend (Lane C) sends one prospect
+Research worker picks up one prospect job
           |
           v
    +--------------+
@@ -42,10 +67,8 @@ Backend (Lane C) sends one prospect
    +-----------------+
          |
          v
-Backend stores and caches it; frontend (Lane D) shows it
+Worker saves it to PostgreSQL; backend serves it; frontend (Lane D) shows it
 ```
-
-## The agents
 
 | Agent | Input | Output | Stops when |
 |---|---|---|---|
@@ -98,24 +121,24 @@ Backend stores and caches it; frontend (Lane D) shows it
 - **Allowed sources only:** public pages, search engines, and authorized data providers. No scraping behind logins or against a site's terms.
 - **Untrusted web content:** text from fetched pages is treated as data, never as instructions to the agents. Agents have no tools beyond search and page fetch, so a malicious page can't make them take other actions.
 - **Data handling:** send Gemini and the search API only what each step needs. Don't log prospect details beyond what's needed to debug, and don't keep raw page dumps.
-- **Keys:** Gemini and search API keys are read from environment variables (`.env` locally) by whichever process runs the agents. They are never committed to the repo and never sent to the frontend.
+- **Keys:** Gemini and search API keys live only in the research worker's environment variables (`.env` locally). The backend and frontend never need them. They are never committed to the repo.
 
 ## Cost and speed
 
-- Cache briefings (Lane C stores them) so the same prospect isn't researched twice.
+- Cache briefings in PostgreSQL so the same prospect isn't researched twice. Before queuing a job, the backend checks for a fresh briefing; the worker checks again before spending API calls.
 - Use a fast, cheaper Gemini model for research and verification. Use a stronger one only where quality clearly improves (likely the briefing writer). Exact models are TBD after testing.
 - Per-prospect limits on searches and tokens, set by the orchestrator.
-- **Proposed starting budget** so Srikar can set timeouts: about 60 seconds per prospect for the whole pipeline. We'll adjust it after measuring.
+- **Proposed starting budget** so Srikar can set the job timeout: about 60 seconds per prospect for the whole pipeline. We'll adjust it after measuring. Because research runs from a queue, the seller doesn't wait on it live; the goal is that briefings are ready before the seller reaches that prospect in the carousel.
 - We'll measure against the README success measures: preparation time, briefing usefulness, and source coverage (share of briefing fields filled with a sourced fact), plus cost per briefing.
 - In development and tests, use mocked search results to keep paid API calls low. Mocked data is clearly labeled as sample data.
 
 ## Proposed interface with the backend (needs Srikar's agreement)
 
-This is a starting proposal only.
+This is a starting proposal only. The handoff happens through the research queue and PostgreSQL, not a direct API call.
 
-- The backend calls the agent service once per prospect.
-- **Input:** `name`, `title`, `company`, optional `company_domain`, optional `notes`, optional `seller_offering` (a short description of what the seller sells).
-- **Output:** a briefing object containing:
+- **Job (backend puts on the queue):** one per prospect: `prospect_id`, `name`, `title`, `company`, optional `company_domain`, optional `notes`, optional `seller_offering` (a short description of what the seller sells).
+- **Job status (worker updates):** `queued` -> `running` -> `done` / `partial` / `failed`, so the UI can show "researching..." on a prospect card.
+- **Result (worker saves to PostgreSQL):** a briefing object linked to `prospect_id`. Srikar owns the table design; the briefing itself can be stored as one JSON column so the format can change without a database migration. It contains:
   - `prospect`: the input echoed back
   - `identity_match`: `confirmed` / `likely` / `unsure`
   - `sections`: person and company sections, each a list of facts
@@ -131,7 +154,7 @@ The exact fields depend on Joseph's ranked list of what sellers want.
 1. **Agree the briefing format and interface** with Srikar and Joseph.
 2. **One prospect in, one briefing out**, runnable on its own with mocked search (the Lane B first deliverable).
 3. Swap in real search for a small set of test prospects and measure time, cost, source coverage, and briefing usefulness.
-4. Hand Srikar a stable interface to call.
+4. Connect the agents to the research worker and queue with Srikar.
 
 ## Later (not MVP)
 
@@ -144,9 +167,10 @@ Whether we build these depends on Joseph's seller interviews.
 ## Open questions
 
 1. Which briefing fields matter most to sellers? (Joseph)
-2. Will the backend call the agents per prospect or per batch, and how long can it wait? (Srikar)
-3. Do the agents run as a separate service the backend calls over HTTP, or as a library inside the backend? This decides where the Gemini and search keys live. (Srikar, James)
-4. Which authorized professional-data sources can we use, and who holds the access? (Jacob, James)
-5. Which search API will we use, and what budget do we have for it? (James, Jacob)
-6. How long should a cached briefing stay valid before it's refreshed? (Srikar, James)
-7. Should the seller's offering be entered once per calling list or per prospect? (Joseph, Aanand)
+2. Which queue do we use (for example Redis-based, or a Postgres-backed job table), and who sets up and owns the worker process? (Srikar, James)
+3. Who writes the briefing to PostgreSQL: the worker directly (as in the diagram), or the worker hands it back to the backend to save? (Srikar)
+4. How are failed jobs retried, and how many times? (Srikar, James)
+5. Which authorized professional-data sources can we use, and who holds the access? (Jacob, James)
+6. Which search API will we use, and what budget do we have for it? (James, Jacob)
+7. How long should a cached briefing stay valid before it's refreshed? (Srikar, James)
+8. Should the seller's offering be entered once per calling list or per prospect? (Joseph, Aanand)
