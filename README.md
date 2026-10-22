@@ -13,7 +13,7 @@ Planned docs (coming soon): product requirements, architecture diagram, setup gu
 ## How it works
 
 1. **Add prospects:** the seller uploads or enters a calling list with names, titles, companies, and notes.
-2. **Research:** an orchestrator agent assigns research tasks to specialized sub-agents (public websites, search engines, authorized professional-data sources).
+2. **Research:** an orchestrator agent assigns research tasks to specialized sub-agents, which pull data through search and data APIs (such as Tavily and People Data Labs) and free public sources.
 3. **Verify and save:** agents cross-check findings, flag uncertainty, and cache briefings so the same prospect isn't researched twice.
 4. **Call ready:** the seller works through a prospect carousel. When a call connects, the briefing is already on screen.
 
@@ -30,7 +30,9 @@ Planned docs (coming soon): product requirements, architecture diagram, setup gu
 
 ## Planned architecture
 
-- **Runtime AI:** Gemini API for research reasoning and summarization.
+- **Runtime AI:** Gemini API or IBM watsonx.ai (TBD) for research reasoning and summarization.
+- **Research data (v1.0):** API calls, not web scraping: Tavily for web search and news, People Data Labs for person and company profiles, plus free public sources (SEC EDGAR, Wikipedia). See [docs/agent-design.md](docs/agent-design.md).
+- **Cloud:** connecting to IBM tools such as IBM Cloud *(details TBD)*.
 - **Agents:** an orchestrator plus research sub-agents, with cross-source verification and guardrails.
 - **Backend:** APIs, research services, and briefing storage/cache. *(stack TBD)*
 - **Frontend:** calling workflow UI with a prospect carousel and briefing view. *(stack TBD)*
@@ -70,7 +72,7 @@ Each person owns one lane. Build only inside your lane; if you need something ch
 
 - **Does:** builds the UI: calling list entry, prospect carousel, briefing view when a call connects, manual call-status controls, and "next lead"; connects the UI to Lane C's APIs; tests and improves usability.
 - **First deliverable:** clickable calling flow using sample briefings: add a list, move through prospects, open a briefing, mark call status.
-- **Does not:** call Gemini or agents directly. All data comes through the backend.
+- **Does not:** call the LLM or agents directly. All data comes through the backend.
 
 ### Lane E: Product and research (Joseph)
 
@@ -109,6 +111,6 @@ James (agents produce briefings) --> Srikar (backend stores & serves them) --> A
 
 ## Rules
 
-- Never commit API keys, `.env` files, or credentials. Keys stay on the backend.
+- Never commit API keys, `.env` files, or credentials. Keys stay server-side (the backend and the research worker), never in the frontend.
 - Use only permitted or authorized data sources for prospect research.
 - Briefings must cite their sources and flag uncertain or conflicting info.
