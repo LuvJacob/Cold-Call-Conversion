@@ -4,11 +4,11 @@ An agentic AI sales assistant that researches prospects before the call, so B2B 
 
 ## Project status
 
-This repository is new. Product scope, team roles, and the challenge submission are defined. A rough low-fidelity MVP exists in a **separate repository**: [Cold-Call-Conversion-rx](https://github.com/LuvJacob/Cold-Call-Conversion-rx), which is used to demonstrate the core concept and guide the build here.
+A browser-local frontend demo is available in `apps/web`. Product scope, team roles, and the challenge submission are defined. A rough low-fidelity MVP exists in a **separate repository**: [Cold-Call-Conversion-rx](https://github.com/LuvJacob/Cold-Call-Conversion-rx), which is used to demonstrate the core concept and guide the build here.
 
-Next up: agree on the agent input/output format and API contracts, then start the backend, agent, and frontend lanes in parallel.
+Next up: agree on the agent input/output format and API contracts, build the backend and agent services, and connect the frontend demo.
 
-Planned docs (coming soon): product requirements, architecture diagram, setup guide.
+Frontend setup: [apps/web/README.md](apps/web/README.md). Backend integration handoff: [docs/frontend-integration.md](docs/frontend-integration.md).
 
 ## How it works
 
@@ -30,10 +30,10 @@ Planned docs (coming soon): product requirements, architecture diagram, setup gu
 
 ## Planned architecture
 
-- **Runtime AI:** Gemini API for research reasoning and summarization.
+- **Runtime AI:** an IBM Cloud enterprise model for research reasoning and summarization; exact service and model remain open.
 - **Agents:** an orchestrator plus research sub-agents, with cross-source verification and guardrails.
-- **Backend:** APIs, research services, and briefing storage/cache. *(stack TBD)*
-- **Frontend:** calling workflow UI with a prospect carousel and briefing view. *(stack TBD)*
+- **Backend:** APIs, research services, and NoSQL storage for seller cadence data. Exact database and backend stack remain open.
+- **Frontend:** Next.js, React, and TypeScript calling workspace with a prospect queue, briefing view, and manual call controls. The current demo uses local sample data.
 - **Dev partner:** IBM Bob helps with architecture, backend tools, orchestration, frontend integration, testing, and deployment.
 
 ## Work lanes
@@ -70,7 +70,7 @@ Each person owns one lane. Build only inside your lane; if you need something ch
 
 - **Does:** builds the UI: calling list entry, prospect carousel, briefing view when a call connects, manual call-status controls, and "next lead"; connects the UI to Lane C's APIs; tests and improves usability.
 - **First deliverable:** clickable calling flow using sample briefings: add a list, move through prospects, open a briefing, mark call status.
-- **Does not:** call Gemini or agents directly. All data comes through the backend.
+- **Does not:** call model providers or agents directly. All data comes through the backend.
 
 ### Lane E: Product and research (Joseph)
 
@@ -105,7 +105,15 @@ James (agents produce briefings) --> Srikar (backend stores & serves them) --> A
 
 ## Local development
 
-*Setup instructions will be added once the stack is chosen.*
+Use Node.js 22.13 or newer.
+
+```sh
+cd apps/web
+npm ci
+npm run dev
+```
+
+Open http://localhost:3000. See [frontend setup and verification](apps/web/README.md) for tests and demo limits. No model or database credentials are needed for this frontend demo.
 
 ## Rules
 
