@@ -13,7 +13,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
+import random
+from typing import Any, Awaitable, Callable
+from pydantic import ValidationError
 from cold_call_agents.adapter import research_status as calc_research_status, to_frontend_brief
 from cold_call_agents.models import Prospect as AgentProspect
 from cold_call_agents.orchestrator import Budget, run_research
@@ -81,8 +83,8 @@ def _get_providers_for_prospect(
 
 
 def _cache_key(p: ProspectModel) -> str:
-    """Cache key: seller, identity fields and notes, so sellers never share a brief and a notes edit never returns an old one."""
-    return f"{p.sellerId}\u001f{normalize_prospect_key(p.listId, p.name, p.company, p.role)}\u001f{_norm(p.notes or '')}"
+    """Cache key: seller, identity fields, notes and company domain, so sellers never share a brief and a notes or domain edit never returns an old one."""
+    return f"{p.sellerId}\u001f{normalize_prospect_key(p.listId, p.name, p.company, p.role)}\u001f{_norm(p.notes or '')}\u001f{p.companyDomain or ''}"
 
 
 async def _record_failure(repo: StorageRepository, job: ResearchJobModel, message: str) -> None:
@@ -104,21 +106,79 @@ async def _record_failure(repo: StorageRepository, job: ResearchJobModel, messag
         logger.exception("Could not mark research job %s failed (lease expiry will reclaim it)", job.id)
 
 
-async def process_job(repo: StorageRepository, job: ResearchJobModel) -> None:
-    """Claim (if still queued) and execute a research job end-to-end."""
-    if job.status == ResearchStatusEnum.QUEUED:
-        claimed = await repo.claim_research_job(
-            "background", lease_seconds=settings.research_lease_seconds, job_id=job.id
-        )
-        if claimed is None:
-            logger.info("Job %s already claimed or finished; skipping", job.id)
+# Our own bugs or bad data: retrying cannot help, so fail immediately.
+_DETERMINISTIC_ERRORS = (ValidationError, TypeError, KeyError, AttributeError, AssertionError)
+
+
+def backoff_seconds(attempt: int, base: float, rand: Callable[[], float] | None = None) -> float:
+    """Exponential backoff after failed attempt number `attempt` (1-based): base * 2^(attempt-1),
+    jittered by +/-25% and capped at 5 minutes."""
+    return min(base * 2 ** (attempt - 1), 300.0) * (0.75 + 0.5 * (rand or random.random)())
+
+
+async def process_job(
+    repo: StorageRepository,
+    job: ResearchJobModel,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+) -> None:
+    """Claim (if still queued) and execute a research job, retrying failures with backoff.
+
+    A failed attempt (exception) is retried up to settings.research_max_attempts total attempts.
+    Each retry re-claims the job (new lease, attempts + 1) and re-checks the prospect revision, so a
+    prospect edited during backoff is never researched or overwritten with stale data.
+    """
+    while True:
+        if job.status == ResearchStatusEnum.QUEUED:
+            claimed = await repo.claim_research_job(
+                "background", lease_seconds=settings.research_lease_seconds, job_id=job.id
+            )
+            if claimed is None:
+                logger.info("Job %s already claimed or finished; skipping", job.id)
+                return
+            job = claimed
+        try:
+            await _run_job(repo, job)
             return
-        job = claimed
+        except Exception as exc:
+            logger.exception("Research failed for prospect %s (attempt %d)", job.prospectId, job.attempts)
+            deterministic = isinstance(exc, _DETERMINISTIC_ERRORS)
+
+        if (
+            deterministic
+            or job.attempts >= settings.research_max_attempts
+            or not await _should_retry(repo, job)
+        ):
+            await _record_failure(repo, job, "Research pipeline encountered an error. Please retry.")
+            return
+        delay = backoff_seconds(job.attempts, settings.research_retry_base_seconds)
+        try:
+            requeued = await repo.requeue_research_job(
+                job.id,
+                "Research attempt failed; retrying.",
+                int(delay) + settings.research_lease_seconds,
+                delay_seconds=delay,
+            )
+        except Exception:
+            logger.exception("Could not requeue research job %s", job.id)
+            await _record_failure(repo, job, "Research pipeline encountered an error. Please retry.")
+            return
+        if not requeued:
+            # The job is no longer ours (lease expired and a newer job took over): never touch the prospect.
+            logger.warning("Job %s is no longer running; abandoning retry without recording failure", job.id)
+            return
+        logger.info("Retrying job %s in %.1fs (attempt %d failed)", job.id, delay, job.attempts)
+        await sleep(delay)
+        job = job.model_copy(update={"status": ResearchStatusEnum.QUEUED})
+
+
+async def _should_retry(repo: StorageRepository, job: ResearchJobModel) -> bool:
+    """Retry only while the prospect still exists at the job's revision."""
     try:
-        await _run_job(repo, job)
+        prospect = await repo.get_prospect(job.sellerId, job.prospectId)
     except Exception:
-        logger.exception("Research failed for prospect %s", job.prospectId)
-        await _record_failure(repo, job, "Research pipeline encountered an error. Please retry.")
+        logger.exception("Could not read prospect %s before retry", job.prospectId)
+        return False
+    return prospect is not None and prospect.revision == job.revision
 
 
 async def _run_job(repo: StorageRepository, job: ResearchJobModel) -> None:
@@ -162,6 +222,7 @@ async def _run_job(repo: StorageRepository, job: ResearchJobModel) -> None:
         name=prospect.name,
         role=prospect.role,
         company=prospect.company,
+        company_domain=prospect.companyDomain,
         notes=prospect.notes or "",
         revision=prospect.revision,
     )

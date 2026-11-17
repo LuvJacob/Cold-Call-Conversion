@@ -1412,10 +1412,7 @@
         "properties": {
           "mode": {
             "type": "string",
-            "enum": [
-              "demo",
-              "live"
-            ],
+            "const": "demo",
             "title": "Mode",
             "default": "demo"
           },
@@ -1756,6 +1753,18 @@
             "maxLength": 4000,
             "title": "Notes",
             "default": ""
+          },
+          "companyDomain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companydomain"
           }
         },
         "additionalProperties": false,
@@ -1798,6 +1807,18 @@
             "maxLength": 4000,
             "title": "Notes",
             "default": ""
+          },
+          "companyDomain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companydomain"
           },
           "id": {
             "type": "string",
@@ -1954,6 +1975,18 @@
               }
             ],
             "title": "Notes"
+          },
+          "companyDomain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Companydomain"
           }
         },
         "additionalProperties": false,
@@ -2056,6 +2089,17 @@
               }
             ],
             "title": "Lasterror"
+          },
+          "notBefore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notbefore"
           },
           "createdAt": {
             "type": "string",
@@ -2211,6 +2255,35 @@
         ],
         "title": "ValidationError"
       },
+      "WorkspaceCallModel": {
+        "properties": {
+          "prospectId": {
+            "type": "string",
+            "title": "Prospectid"
+          },
+          "startedAt": {
+            "type": "string",
+            "title": "Startedat"
+          },
+          "endedAt": {
+            "type": "string",
+            "title": "Endedat"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CallOutcomeEnum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prospectId",
+          "startedAt",
+          "endedAt",
+          "outcome"
+        ],
+        "title": "WorkspaceCallModel",
+        "description": "Completed call as the frontend workspaceSchema.calls expects it."
+      },
       "WorkspaceSummaryResponse": {
         "properties": {
           "version": {
@@ -2244,7 +2317,7 @@
           },
           "calls": {
             "items": {
-              "$ref": "#/components/schemas/CompletedCallModel"
+              "$ref": "#/components/schemas/WorkspaceCallModel"
             },
             "type": "array",
             "title": "Calls"

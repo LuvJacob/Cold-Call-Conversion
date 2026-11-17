@@ -129,7 +129,18 @@ class StorageRepository(ABC):
     async def claim_research_job(
         self, worker_id: str, lease_seconds: int = 90, job_id: str | None = None
     ) -> ResearchJobModel | None:
-        """Atomically move a QUEUED job (a specific one if job_id is given) to RUNNING with a lease."""
+        """Atomically move a QUEUED job (a specific one if job_id is given) to RUNNING with a lease.
+
+        Without job_id, jobs still in retry backoff (notBefore in the future) are skipped."""
+        pass
+
+    @abstractmethod
+    async def requeue_research_job(
+        self, job_id: str, error: str, lease_seconds: int, delay_seconds: float = 0
+    ) -> bool:
+        """Return a RUNNING job to QUEUED for a retry (keeps its attempts count). The job stays live
+        (not reclaimable by lease expiry) for lease_seconds, and a poller (claim without job_id) will not
+        take it before delay_seconds pass. Returns False if it was no longer RUNNING."""
         pass
 
     @abstractmethod

@@ -23,9 +23,11 @@ class Settings(BaseModel):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
-    brief_cache_days: int = int(os.getenv("BRIEF_CACHE_DAYS", "30"))
+    brief_cache_days: int = int(os.getenv("BRIEF_CACHE_DAYS", "7"))
     research_lease_seconds: int = int(os.getenv("RESEARCH_LEASE_SECONDS", "90"))
     research_timeout_seconds: int = int(os.getenv("RESEARCH_TIMEOUT_SECONDS", "60"))
+    research_max_attempts: int = int(os.getenv("RESEARCH_MAX_ATTEMPTS", "3"))
+    research_retry_base_seconds: float = float(os.getenv("RESEARCH_RETRY_BASE_SECONDS", "5"))
 
 
 settings = Settings()

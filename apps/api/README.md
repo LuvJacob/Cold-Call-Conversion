@@ -50,6 +50,28 @@ Set `ENVIRONMENT` to say where the service runs. Dev auth (`AUTH_MODE=dev`) is o
 - `POST /v1/research` is idempotent: a prospect with a queued or running job for its current revision is skipped, so the response lists only newly created jobs.
 - Prospects that match a sample fixture (northwind, harborview, cedarridge) get sample briefings. Any other prospect gets a `partial` briefing with no facts and an uncertainty note, until live Tavily/People Data Labs/LLM providers are connected (Lane B). Nothing is invented.
 
+## Prospect company domain
+
+`companyDomain` is optional on create, `PATCH`, and CSV import (header aliases: `website`, `domain`, `company website`, `company domain`, `url`). It is normalized to a bare lowercase hostname (scheme, path, port and a leading `www.` removed). IP addresses, credentials, invisible characters, reserved suffixes (`.local`, `.internal`, `.test`, `.localhost` and similar), non-http(s) schemes and invalid hostnames return `422` (CSV rows are rejected individually). On `PATCH`, omit it to keep the value or send `""` to clear it. Changing it bumps the prospect revision, clears the brief, and changes the brief cache key.
+
+## Research retries and brief cache
+
+A research attempt that fails with an exception is retried automatically with jittered exponential backoff. After the last attempt the prospect stays `failed` with a generic error. Stale prospects (edited meanwhile) and deterministic errors (validation or programming errors) are never retried. Validation `422` responses do not echo the rejected input. Cached briefs older than the cache window are ignored on read.
+
+- `RESEARCH_MAX_ATTEMPTS`: total attempts per job (default `3`).
+- `RESEARCH_RETRY_BASE_SECONDS`: backoff base (default `5`; delays about 5 s, 10 s, 20 s, +/-25%).
+- `BRIEF_CACHE_DAYS`: how long a cached brief stays valid (default `7`).
+- `RESEARCH_LEASE_SECONDS` (default `90`) and `RESEARCH_TIMEOUT_SECONDS` (default `60`) as before.
+
+## OpenAPI export
+
+Regenerate `docs/api/openapi.json` from the app after changing routes or models:
+
+```bash
+cd apps/api
+.venv/bin/python scripts/export_openapi.py   # optional argument: output path
+```
+
 ## Local Development & Testing
 
 ```bash
@@ -73,7 +95,7 @@ By default the worker uses sample fixtures for the fictional sample prospects an
 - `SEC_USER_AGENT`: descriptive User-Agent with contact info, required by SEC. Without it, EDGAR is skipped.
 - `RESEARCH_CONTACT`: optional contact text added to the generic User-Agent sent to Wikimedia and company sites.
 
-Prospects do not carry a company domain yet, so the homepage fetched is the website Wikidata lists for the matched company. Details and limits: [apps/agents/README.md](../agents/README.md).
+Prospects may carry an optional `companyDomain` (see below). When set it is passed to the agents; otherwise the homepage fetched is the website Wikidata lists for the matched company. Details and limits: [apps/agents/README.md](../agents/README.md).
 
 To run the local API server:
 

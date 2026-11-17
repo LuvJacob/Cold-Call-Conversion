@@ -3,14 +3,18 @@
 from typing import AsyncIterator
 import pytest
 from httpx import ASGITransport, AsyncClient
+from cold_call_api.config import settings
 from cold_call_api.main import app
 from cold_call_api.storage import set_repository
 from cold_call_api.storage.memory import MemoryStorageRepository
 
 
 @pytest.fixture(autouse=True)
-def reset_storage() -> None:
+def reset_storage(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure a clean, isolated repository is used for every test."""
+    # Failures are final by default so existing tests stay fast; retry tests opt in.
+    monkeypatch.setattr(settings, "research_max_attempts", 1)
+    monkeypatch.setattr(settings, "research_retry_base_seconds", 0.0)
     repo = MemoryStorageRepository(seed=False)
     set_repository(repo)
 
