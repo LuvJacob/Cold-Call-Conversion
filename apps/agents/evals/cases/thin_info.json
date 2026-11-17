@@ -1,0 +1,47 @@
+{
+  "id": "thin_info",
+  "description": "Profile has a name and company but no title and nothing else is found.",
+  "tags": [
+    "thin"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-thin",
+    "name": "Arjun Mehta",
+    "company": "Sparrow Sample Works",
+    "role": "Manager",
+    "company_domain": null,
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Arjun Mehta",
+      "company": "Sparrow Sample Works",
+      "title": "",
+      "start_date": "",
+      "source": {
+        "title": "Arjun Mehta profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/arjun-mehta",
+        "date": "2026-09-01"
+      }
+    },
+    "company": null
+  },
+  "search_results": [],
+  "expect": {
+    "identity_match": [
+      "confirmed"
+    ],
+    "min_facts": 0,
+    "max_facts": 0,
+    "must_flag_uncertainty": true,
+    "no_person_facts": true,
+    "must_contain": [
+      "Current role could not be found"
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "id": "unsourced_fact",
+  "description": "A researcher emits a fact citing a source that does not exist: guardrails must drop it.",
+  "tags": [
+    "guardrails",
+    "unsourced"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-unsourced",
+    "name": "Ines Costa",
+    "company": "Harbor Light Sample Co",
+    "role": "Head of Finance",
+    "company_domain": "harborlight-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Ines Costa",
+      "company": "Harbor Light Sample Co",
+      "title": "Head of Finance",
+      "start_date": "May 2022",
+      "source": {
+        "title": "Ines Costa profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/ines-costa",
+        "date": "2026-09-01"
+      }
+    },
+    "company": null
+  },
+  "search_results": [],
+  "expect": {
+    "identity_match": [
+      "confirmed"
+    ],
+    "min_facts": 2,
+    "max_facts": 3,
+    "must_flag_uncertainty": false,
+    "must_not_contain": [
+      "UNSOURCED-CLAIM"
+    ]
+  },
+  "inject": {
+    "facts": [
+      {
+        "id": "pfx1",
+        "subject": "person",
+        "key": "award",
+        "label": "Award",
+        "text": "UNSOURCED-CLAIM won an industry award.",
+        "source_ids": [
+          "missing-source"
+        ]
+      },
+      {
+        "id": "pfx2",
+        "subject": "person",
+        "key": "award2",
+        "label": "Award",
+        "text": "UNSOURCED-CLAIM no sources at all.",
+        "source_ids": []
+      }
+    ]
+  }
+}

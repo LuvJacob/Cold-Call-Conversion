@@ -1,0 +1,22 @@
+{
+  "id": "fixture_cedarridge",
+  "description": "Same-name person at a different company: identity must stay unsure and person facts empty.",
+  "tags": [
+    "identity"
+  ],
+  "fixture": "cedarridge",
+  "today": "2026-10-22",
+  "expect": {
+    "identity_match": [
+      "unsure"
+    ],
+    "min_facts": 1,
+    "max_facts": 6,
+    "must_flag_uncertainty": true,
+    "no_person_facts": true,
+    "must_not_contain": [
+      "Procurement Lead",
+      "Redwood Packaging"
+    ]
+  }
+}

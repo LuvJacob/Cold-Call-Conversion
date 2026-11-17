@@ -1,0 +1,83 @@
+{
+  "id": "famous_namesake",
+  "description": "Name matches a famous person; only the famous person's pages exist. Must not borrow their facts.",
+  "tags": [
+    "same-name",
+    "identity"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-namesake",
+    "name": "Michael Jordan",
+    "company": "Hillcrest Dental Sample Group",
+    "role": "Office Manager",
+    "company_domain": "hillcrest-dental-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Michael Jordan",
+      "company": "Windy City Basketball Club (sample)",
+      "title": "Shooting guard",
+      "start_date": "1984",
+      "source": {
+        "title": "Michael Jordan profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/michael-jordan",
+        "date": "2026-01-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Hillcrest Dental Sample Group",
+      "domain": "hillcrest-dental-sample.example",
+      "industry": "Dental clinics",
+      "source": {
+        "title": "Hillcrest Dental Sample Group company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/hillcrest-dental",
+        "date": "2026-07-01"
+      },
+      "employee_count": "40"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "talks"
+      ],
+      "title": "Michael Jordan wins six championships (sample)",
+      "url": "https://sample-sports.example/jordan",
+      "publisher": "Sample Sports",
+      "published_date": "2025-06-01",
+      "content": "Michael Jordan won six championships with the Chicago Bulls and retired as a basketball legend.",
+      "claims": [
+        {
+          "subject": "person",
+          "key": "career",
+          "label": "Career",
+          "text": "Won six championships with the Chicago Bulls.",
+          "value": "six championships"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "unsure"
+    ],
+    "min_facts": 1,
+    "max_facts": 5,
+    "must_flag_uncertainty": true,
+    "no_person_facts": true,
+    "must_not_contain": [
+      "championships",
+      "Basketball",
+      "Bulls"
+    ]
+  }
+}

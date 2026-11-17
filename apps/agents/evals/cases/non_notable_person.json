@@ -1,0 +1,65 @@
+{
+  "id": "non_notable_person",
+  "description": "Person with no public footprint at a company that has some.",
+  "tags": [
+    "non-notable"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-nonnotable",
+    "name": "Kim Alvarez",
+    "company": "Granite Peak Sample Co",
+    "role": "Buyer",
+    "company_domain": "granite-peak-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": null,
+    "company": {
+      "sample": true,
+      "name": "Granite Peak Sample Co",
+      "domain": "granite-peak-sample.example",
+      "industry": "Mining supplies",
+      "source": {
+        "title": "Granite Peak Sample Co company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/granite-peak",
+        "date": "2026-09-01"
+      },
+      "employee_count": "85"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "news"
+      ],
+      "title": "Granite Peak opens a depot (sample)",
+      "url": "https://sample-mining-news.example/granite-peak-depot",
+      "publisher": "Sample Mining News",
+      "published_date": "2026-09-15",
+      "content": "Granite Peak Sample Co opened a new regional depot.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "recent_news.depot",
+          "label": "Recent news",
+          "text": "Opened a new regional depot.",
+          "value": "regional depot"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "unsure"
+    ],
+    "min_facts": 2,
+    "max_facts": 6,
+    "must_flag_uncertainty": true,
+    "no_person_facts": true
+  }
+}

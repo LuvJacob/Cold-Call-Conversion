@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from .guardrails import escape_data, is_private, sanitize_web_text
+from .guardrails import INSTRUCTION_LIKE, ROLE_PREFIX, escape_data, is_private, sanitize_web_text
 from .models import Briefing, Fact, IdentityMatch, Prospect, Source, TalkingPoint
 from .providers import LLMClient
 
@@ -30,13 +30,15 @@ def _clean(text: Optional[str], n: int = 160) -> str:
 
 
 def _ask(llm: LLMClient, prompt: str) -> Optional[str]:
-    """One LLM call. Returns None on failure, empty or private output."""
+    """One LLM call. Returns None on failure, empty, private or instruction-like output."""
     try:
         out = llm.complete(SYSTEM, prompt)
     except Exception:
         return None
     out = (out or "").strip()
-    return None if not out or is_private(out) else out
+    if not out or is_private(out) or INSTRUCTION_LIKE.search(out) or ROLE_PREFIX.search(out):
+        return None
+    return out
 
 
 def write_briefing(
