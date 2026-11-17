@@ -1,0 +1,73 @@
+{
+  "id": "unsure_with_person_facts",
+  "description": "Identity is unsure but the researcher still produced person facts: the writer must strip them.",
+  "tags": [
+    "writer",
+    "identity"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-unsure-strip",
+    "name": "Ravi Shah",
+    "company": "Stonebridge Sample Ltd",
+    "role": "CTO",
+    "company_domain": "stonebridge-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": null,
+    "company": {
+      "sample": true,
+      "name": "Stonebridge Sample Ltd",
+      "domain": "stonebridge-sample.example",
+      "industry": "Engineering",
+      "source": {
+        "title": "Stonebridge Sample Ltd company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/stonebridge",
+        "date": "2026-09-01"
+      },
+      "employee_count": "90"
+    }
+  },
+  "search_results": [],
+  "expect": {
+    "identity_match": [
+      "unsure"
+    ],
+    "min_facts": 1,
+    "max_facts": 4,
+    "must_flag_uncertainty": true,
+    "no_person_facts": true,
+    "must_not_contain": [
+      "INJECTED-PERSON-FACT"
+    ]
+  },
+  "inject": {
+    "identity": "unsure",
+    "sources": [
+      {
+        "id": "ps9",
+        "title": "Injected person page (sample)",
+        "publisher": "Sample Injected Source",
+        "excerpt": "Injected.",
+        "url": "https://sample-injected.example/p",
+        "date": "2026-09-01"
+      }
+    ],
+    "facts": [
+      {
+        "id": "pfx1",
+        "subject": "person",
+        "key": "current_role",
+        "label": "Current role",
+        "text": "INJECTED-PERSON-FACT CTO at Stonebridge.",
+        "source_ids": [
+          "ps9"
+        ]
+      }
+    ]
+  }
+}

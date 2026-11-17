@@ -1,0 +1,78 @@
+{
+  "id": "former_employee",
+  "description": "Prospect left the listed company; the profile points to a new employer. Must not read as confirmed.",
+  "tags": [
+    "former-employee",
+    "identity"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-former",
+    "name": "Dana Whitfield",
+    "company": "Alder Logistics Sample Co",
+    "role": "Director of Operations",
+    "company_domain": "alder-logistics-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Dana Whitfield",
+      "company": "Birchwood Freight Sample Inc",
+      "title": "Director of Operations",
+      "start_date": "March 2026",
+      "source": {
+        "title": "Dana Whitfield profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/dana-whitfield",
+        "date": "2026-09-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Alder Logistics Sample Co",
+      "domain": "alder-logistics-sample.example",
+      "industry": "Logistics",
+      "source": {
+        "title": "Alder Logistics Sample Co company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/alder-logistics",
+        "date": "2026-08-01"
+      },
+      "employee_count": "200"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "talks"
+      ],
+      "title": "Dana Whitfield moves to Birchwood (sample)",
+      "url": "https://sample-logistics-news.example/whitfield-move",
+      "publisher": "Sample Logistics News",
+      "published_date": "2026-03-20",
+      "content": "Dana Whitfield, formerly Director of Operations at Alder Logistics Sample Co, joined Birchwood Freight Sample Inc in March 2026.",
+      "claims": [
+        {
+          "subject": "person",
+          "key": "job_change",
+          "label": "Job change",
+          "text": "Left Alder Logistics in March 2026 to join Birchwood Freight.",
+          "value": "job change"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "likely",
+      "unsure"
+    ],
+    "min_facts": 1,
+    "max_facts": 8,
+    "must_flag_uncertainty": true
+  }
+}

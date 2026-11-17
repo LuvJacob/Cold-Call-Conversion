@@ -40,7 +40,9 @@ Stdout is the frontend-shaped brief JSON. A "SAMPLE DATA ONLY" notice and the re
 - `orchestrator.py`: plain code; runs both researchers in parallel with a time limit and search budget, then guardrails, verifier, writer. Returns a partial briefing if a researcher fails.
 - `free_sources/`: optional free public sources, no API keys (see below).
 - `live/`: paid provider clients (Tavily, People Data Labs, watsonx.ai, Gemini), date parsing and the `build_live_providers` factory (see below).
-- `cli.py`: command-line entry point for the samples.
+- `metrics.py`: per-run time, request, token and estimated-cost tracking (placeholder price table).
+- `evals/`: offline evaluation set (`cases/`), automatic checks and the runner (see below).
+- `cli.py`: command-line entry point for the samples (`--eval` runs the evals).
 - `fixtures/`: the three fictional SAMPLE prospects (JSON).
 
 ## Where real providers plug in
@@ -109,6 +111,47 @@ Behavior worth knowing:
 - Token usage: `llm.usage` (`calls`, `input_tokens`, `output_tokens`) accumulates per client for later cost tracking.
 - Limit: Tavily results carry no pre-extracted `claims`, and `extract_claims` in `researchers.py` is still the v0 stub. Until an LLM extraction step is added there, live search results become sources but not facts; PDL facts work now. That change is in `researchers.py` and needs its own task.
 - Limit: the watsonx `version` date and default model id could not be fully verified without a key; both are env-configurable.
+
+## Evaluations and cost tracking
+
+### Run the evals
+
+```sh
+cd apps/agents
+.venv/bin/python -m evals.run                      # offline, mock providers, no network or keys
+.venv/bin/python -m cold_call_agents.cli --eval    # same thing (source checkout only: evals/ is not packaged)
+.venv/bin/python -m evals.run --case prompt_injection --report /tmp/report.json
+```
+
+`evals/cases/*.json` holds 21 fictional prospects (all SAMPLE data, recorded provider responses served by the mocks): a clean company, a private company, an ambiguous company name, a non-notable person, a famous namesake, a former employee, thin info, conflicting sources, stale data, prompt injection, private-data leaks, a German company, odd Wikidata-style categories, a search outage, a total miss, an unsourced fact, unsafe LLM output (private data, injection) and an unsure-identity case with person facts, plus the three shipped fixtures. Each case lists expected properties, not exact text: allowed `identity_match` values, `min_facts`/`max_facts`, `must_flag_uncertainty`, `must_not_contain`/`must_contain` strings, `must_have_status`, `min_stale_facts`/`max_stale_facts`, `no_person_facts`. Cases can also set `llm_text` (a mock LLM that always returns that text), `inject` (extra facts/sources/forced identity from the person researcher, to exercise guardrails and the writer). The run prints a summary table, writes a JSON report (default `evals/report.json`, git-ignored) and exits non-zero if any check fails. `tests/test_evals.py` runs the offline set, so CI enforces it.
+
+### What is checked on every briefing
+
+citations (every fact and talking point cites a source that exists), sources valid (each source has an http(s) URL; URLs are not fetched), no private data (guardrail phone/address/personal-email/family patterns), no instruction-like text, banned and required strings, uncertainty flagged where expected, fact count bounds, identity rules, person facts only when identity is not unsure, conflicting/stale statuses, frontend shape, and budget (research time, i.e. the slower researcher plus guardrails and verify, within `Budget.timeout_seconds` plus a 2s allowance; the writer is excluded; searches and profile lookups within their caps).
+
+### Cost and speed numbers
+
+`run_research_with_metrics(...)` (orchestrator.py) returns `(briefing, RunMetrics)`; `run_research` is unchanged. `RunMetrics` has wall seconds per stage (`person` and `company` run in parallel, so they overlap; `guardrails`, `verify`, `write`), search/profile/HTTP request counts, LLM calls and input/output tokens (read from the client's `usage`; template and mock LLMs report 0), and `est_cost_usd`. One `research_run {...json...}` line is logged per run on logger `cold_call_agents.metrics`, identified by `prospect_id` only. `python -m cold_call_agents.cli --sample northwind --metrics` prints it. Counts are per-run deltas. `http_requests` covers the free-source clients only (the live clients expose no counter yet), and sharing one client across concurrent runs mixes counts. If a researcher times out and is abandoned its stage time may be missing. Mock LLM calls are counted from `.calls`; watsonx and Gemini both expose `usage`.
+
+Estimated cost = input tokens x input price + output tokens x output price (per 1M tokens, by model id) + searches x `search_per_request` + profile lookups x `profile_per_request`. The default prices in `cold_call_agents/metrics.py` are PLACEHOLDERS, not quotes; a model with no entry costs 0. Non-finite or negative prices, or any unreadable value, make the whole override fall back to the defaults with a warning. To update them without code changes set `CCC_PRICES` to inline JSON or a JSON file path:
+
+```sh
+export CCC_PRICES='{"models": {"gemini-flash-lite-latest": [0.10, 0.40], "ibm/granite-3-3-8b-instruct": [0.20, 0.20]}, "search_per_request": 0.008}'
+```
+
+### Compare models later (watsonx vs Gemini)
+
+`--live` uses `build_live_providers` from the environment; `--free` uses `build_free_providers` (no keys, still network). They make real calls and may cost money, so they refuse to run (exit 2) when `CI` is set or under pytest, and also unless you opt in with `CCC_ALLOW_LIVE_EVAL=1`. The guard is also in `run_all`/`run_case`. The tests never use them. The cases only supply the prospects; the mock data and the facts-count expectations are for mock runs, so expect some expectation failures against real data and compare the reports, not the exit code.
+
+```sh
+export CCC_ALLOW_LIVE_EVAL=1 TAVILY_API_KEY=... PDL_API_KEY=... CCC_PRICES='{...}'          # set in your shell, never in files
+LLM_PROVIDER=watsonx WATSONX_API_KEY=... WATSONX_URL=... WATSONX_PROJECT_ID=... \
+  .venv/bin/python -m evals.run --live --case fixture_northwind --report /tmp/watsonx.json
+LLM_PROVIDER=gemini GEMINI_API_KEY=... \
+  .venv/bin/python -m evals.run --live --case fixture_northwind --report /tmp/gemini.json
+```
+
+Compare `totals` (seconds, tokens, est cost) and per-case `checks` between the two JSON reports. Limits: live search results have no pre-extracted claims until the LLM extraction step exists, so live fact counts will be low; there is no LLM quality grading yet.
 
 ## Frontend limitation: `mode: "demo"`
 

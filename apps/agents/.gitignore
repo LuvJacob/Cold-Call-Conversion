@@ -5,3 +5,6 @@ __pycache__/
 .env
 # The repo-wide .env.* rule would hide the template; it holds only empty placeholders.
 !.env.example
+
+# Eval output
+evals/report.json

@@ -1,0 +1,56 @@
+{
+  "id": "provider_outage",
+  "description": "Search provider fails: briefing is partial and says what is missing.",
+  "tags": [
+    "outage"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-outage",
+    "name": "Sofia Marin",
+    "company": "Bluewater Sample LLC",
+    "role": "Controller",
+    "company_domain": "bluewater-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Sofia Marin",
+      "company": "Bluewater Sample LLC",
+      "title": "Controller",
+      "start_date": "July 2024",
+      "source": {
+        "title": "Sofia Marin profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/sofia-marin",
+        "date": "2026-09-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Bluewater Sample LLC",
+      "domain": "bluewater-sample.example",
+      "industry": "Water services",
+      "source": {
+        "title": "Bluewater Sample LLC company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/bluewater",
+        "date": "2026-09-01"
+      },
+      "employee_count": "150"
+    }
+  },
+  "search_results": [],
+  "expect": {
+    "identity_match": [
+      "confirmed"
+    ],
+    "min_facts": 2,
+    "max_facts": 5,
+    "must_flag_uncertainty": true
+  },
+  "fail": "search"
+}

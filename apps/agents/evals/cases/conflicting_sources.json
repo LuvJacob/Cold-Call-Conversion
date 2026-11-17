@@ -1,0 +1,99 @@
+{
+  "id": "conflicting_sources",
+  "description": "Three sources, three company sizes: conflicts must be flagged.",
+  "tags": [
+    "conflicting"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-conflict",
+    "name": "Greta Lindqvist",
+    "company": "Tidewater Marine Sample Ltd",
+    "role": "CIO",
+    "company_domain": "tidewater-marine-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Greta Lindqvist",
+      "company": "Tidewater Marine Sample Ltd",
+      "title": "CIO",
+      "start_date": "June 2022",
+      "source": {
+        "title": "Greta Lindqvist profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/greta-lindqvist",
+        "date": "2026-08-10"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Tidewater Marine Sample Ltd",
+      "domain": "tidewater-marine-sample.example",
+      "industry": "Marine services",
+      "source": {
+        "title": "Tidewater Marine Sample Ltd company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/tidewater",
+        "date": "2026-08-10"
+      },
+      "employee_count": "300"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "about"
+      ],
+      "title": "About Tidewater (sample)",
+      "url": "https://tidewater-marine-sample.example/about",
+      "publisher": "Tidewater Marine (company site, sample)",
+      "published_date": "2026-09-01",
+      "content": "Tidewater Marine Sample Ltd has 450 employees.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "employee_count",
+          "label": "Company size",
+          "text": "About 450 employees.",
+          "value": "450"
+        }
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": [
+        "about"
+      ],
+      "title": "Tidewater directory entry (sample)",
+      "url": "https://sample-marine-directory.example/tidewater",
+      "publisher": "Sample Marine Directory",
+      "published_date": "2026-04-01",
+      "content": "Tidewater Marine Sample Ltd employs roughly 120 people.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "employee_count",
+          "label": "Company size",
+          "text": "About 120 employees.",
+          "value": "120"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "confirmed"
+    ],
+    "min_facts": 4,
+    "max_facts": 12,
+    "must_flag_uncertainty": true,
+    "must_have_status": [
+      "conflicting"
+    ]
+  }
+}

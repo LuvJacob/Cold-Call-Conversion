@@ -1,0 +1,21 @@
+{
+  "id": "fixture_northwind",
+  "description": "Clean public-company style case: role and size each confirmed by two independent sources.",
+  "tags": [
+    "clean"
+  ],
+  "fixture": "northwind",
+  "today": "2026-10-22",
+  "expect": {
+    "identity_match": [
+      "confirmed"
+    ],
+    "min_facts": 4,
+    "max_facts": 10,
+    "must_flag_uncertainty": false,
+    "must_have_status": [
+      "confirmed"
+    ],
+    "max_stale_facts": 0
+  }
+}

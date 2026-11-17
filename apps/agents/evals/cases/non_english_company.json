@@ -1,0 +1,80 @@
+{
+  "id": "non_english_company",
+  "description": "German company and role; non-ASCII names and text must survive and be cited.",
+  "tags": [
+    "non-english"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-german",
+    "name": "Jürgen Weiß",
+    "company": "Müller Logistik Beispiel GmbH",
+    "role": "Leiter IT",
+    "company_domain": "mueller-logistik-beispiel.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Jürgen Weiß",
+      "company": "Müller Logistik Beispiel GmbH",
+      "title": "Leiter IT",
+      "start_date": "April 2020",
+      "source": {
+        "title": "Jürgen Weiß profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/juergen-weiss",
+        "date": "2026-09-05"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Müller Logistik Beispiel GmbH",
+      "domain": "mueller-logistik-beispiel.example",
+      "industry": "Speditionswesen",
+      "source": {
+        "title": "Müller Logistik Beispiel GmbH company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/mueller-logistik",
+        "date": "2026-09-05"
+      },
+      "employee_count": "420"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "about"
+      ],
+      "title": "Über uns (Beispiel)",
+      "url": "https://mueller-logistik-beispiel.example/ueber-uns",
+      "publisher": "Müller Logistik Beispiel (Firmenseite, Beispiel)",
+      "published_date": "2026-09-01",
+      "content": "Die Müller Logistik Beispiel GmbH ist ein Speditionsunternehmen mit rund 420 Mitarbeitern.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "employee_count",
+          "label": "Mitarbeiter",
+          "text": "Rund 420 Mitarbeiter.",
+          "value": "420"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "confirmed",
+      "likely"
+    ],
+    "min_facts": 3,
+    "max_facts": 10,
+    "must_flag_uncertainty": false,
+    "must_contain": [
+      "Mitarbeiter"
+    ]
+  }
+}

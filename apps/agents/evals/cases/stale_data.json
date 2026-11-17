@@ -1,0 +1,77 @@
+{
+  "id": "stale_data",
+  "description": "Every source is more than a year old: facts must be marked stale.",
+  "tags": [
+    "stale"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-stale",
+    "name": "Hana Kobayashi",
+    "company": "Old Mill Sample Corp",
+    "role": "Plant Director",
+    "company_domain": "oldmill-sample.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Hana Kobayashi",
+      "company": "Old Mill Sample Corp",
+      "title": "Plant Director",
+      "start_date": "January 2019",
+      "source": {
+        "title": "Hana Kobayashi profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/hana-kobayashi",
+        "date": "2022-02-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Old Mill Sample Corp",
+      "domain": "oldmill-sample.example",
+      "industry": "Paper",
+      "source": {
+        "title": "Old Mill Sample Corp company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/old-mill",
+        "date": "2022-01-10"
+      },
+      "employee_count": "500"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "news"
+      ],
+      "title": "Old Mill expands (sample)",
+      "url": "https://sample-paper-news.example/old-mill",
+      "publisher": "Sample Paper News",
+      "published_date": "2022-03-01",
+      "content": "Old Mill Sample Corp announced a second line.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "recent_news.second_line",
+          "label": "Recent news",
+          "text": "Announced a second line.",
+          "value": "second line"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "confirmed"
+    ],
+    "min_facts": 3,
+    "max_facts": 8,
+    "must_flag_uncertainty": true,
+    "min_stale_facts": 2
+  }
+}
