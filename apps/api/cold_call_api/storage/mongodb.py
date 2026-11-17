@@ -229,7 +229,8 @@ class MongoStorageRepository(StorageRepository):
             {"sellerId": seller_id, "id": prospect_id, "revision": revision},
             {"$set": update_fields},
         )
-        return res.modified_count > 0
+        # matched_count: an identical rewrite still means the revision matched
+        return res.matched_count > 0
 
     async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
         doc = self._brief_cache.find_one({"prospectKey": prospect_key}, {"_id": 0})
@@ -256,6 +257,18 @@ class MongoStorageRepository(StorageRepository):
                 continue
             active = await self.get_active_call(seller_id)
             if active and active.prospectId == pid:
+                continue
+            # Idempotent: a job for this exact revision is already in flight
+            if self._jobs.find_one(
+                {
+                    "sellerId": seller_id,
+                    "prospectId": pid,
+                    "revision": p.revision,
+                    "status": {
+                        "$in": [ResearchStatusEnum.QUEUED.value, ResearchStatusEnum.RUNNING.value]
+                    },
+                }
+            ):
                 continue
 
             self._prospects.update_one(

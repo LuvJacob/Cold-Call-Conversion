@@ -306,6 +306,14 @@ class MemoryStorageRepository(StorageRepository):
                 active = self._active_calls.get(seller_id)
                 if active and active.prospectId == pid:
                     continue
+                # Idempotent: a job for this exact revision is already in flight
+                if any(
+                    j.prospectId == pid
+                    and j.revision == p.revision
+                    and j.status in (ResearchStatusEnum.QUEUED, ResearchStatusEnum.RUNNING)
+                    for j in self._jobs.values()
+                ):
+                    continue
 
                 # Set prospect status to RUNNING
                 self._prospects[pid] = p.model_copy(

@@ -40,8 +40,8 @@ logger = logging.getLogger("cold_call_api.worker")
 def _get_providers_for_prospect(p: ProspectModel) -> tuple[Any, Any, Any]:
     """Resolve LLM, Search, and Profile providers for a prospect.
 
-    Matches fixture mocks for sample prospects (e.g. northwind, harborview, cedarridge)
-    or initializes appropriate providers.
+    Matches fixture mocks for sample prospects (northwind, harborview, cedarridge).
+    Other prospects get empty providers (no facts) until live providers exist.
     """
     company_lower = p.company.lower()
     matched_key: str | None = None
@@ -51,32 +51,11 @@ def _get_providers_for_prospect(p: ProspectModel) -> tuple[Any, Any, Any]:
             break
 
     if matched_key:
-        fx = load_fixture(matched_key)
-        return mocks_from_fixture(fx)
+        return mocks_from_fixture(load_fixture(matched_key))
 
-    # General fallback mock provider for arbitrary prospect entries
-    llm = MockLLM()
-    search = MockSearch([
-        {
-            "title": f"{p.company} official site",
-            "url": f"https://www.{p.company.lower().replace(' ', '')}.com",
-            "publisher": "Company Website",
-            "content": f"{p.company} is an active enterprise organization.",
-            "published_date": "2026-06-01",
-            "keywords": [p.company.lower(), p.name.lower()],
-            "claims": [
-                {
-                    "label": "Company overview",
-                    "text": f"{p.company} operates in regional and national markets.",
-                }
-            ],
-        }
-    ])
-    profiles = MockProfiles(
-        person={"name": p.name, "company": p.company, "title": p.role},
-        company={"name": p.company, "industry": "Technology / Services"},
-    )
-    return llm, search, profiles
+    # No fixture and no live providers yet: return empty providers so the
+    # briefing contains no facts rather than invented ones.
+    return MockLLM(), MockSearch([]), MockProfiles(None, None)
 
 
 async def process_job(repo: StorageRepository, job: ResearchJobModel) -> None:
@@ -140,9 +119,15 @@ async def process_job(repo: StorageRepository, job: ResearchJobModel) -> None:
 
         # Adapt to frontend brief schema
         brief_dict = to_frontend_brief(briefing)
+        if not briefing.facts:
+            brief_dict["uncertainty"].insert(
+                0, "No live research providers are connected yet, so no facts were gathered for this prospect."
+            )
         brief_model = BriefModel.model_validate(brief_dict)
         raw_status = calc_research_status(briefing)
-        status_enum = ResearchStatusEnum.PARTIAL if raw_status == "partial" else ResearchStatusEnum.READY
+        status_enum = (
+            ResearchStatusEnum.PARTIAL if raw_status == "partial" or not briefing.facts else ResearchStatusEnum.READY
+        )
 
         # Save to cache
         await repo.save_cached_briefing(pkey, brief_model)

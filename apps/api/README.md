@@ -32,11 +32,25 @@ FastAPI backend service and asynchronous research job worker for Cold Call Conve
 
 OpenAPI specification is available at `docs/api/openapi.json` and interactively at `/docs` when running the server.
 
+## Authentication
+
+Set `AUTH_MODE` to one of:
+
+- `jwt` (required for any deployed environment): `Authorization: Bearer <JWT>`. The token must be signed with `JWT_SECRET` (algorithm `JWT_ALGORITHM`, default HS256) and carry `exp` and a `sub` (or `seller_id`) claim, which becomes the seller. Invalid, expired, unsigned or unsupported tokens get `401`. `X-Seller-ID` is ignored. If `JWT_SECRET` is empty, every request gets `401`.
+- `dev` (default, local only): `X-Seller-ID` header, else `DEFAULT_DEV_SELLER_ID`. Never deploy with this mode.
+
+Any other value fails closed with `401`.
+
+## Research behaviour
+
+- `POST /v1/research` is idempotent: a prospect with a queued or running job for its current revision is skipped, so the response lists only newly created jobs.
+- Prospects that match a sample fixture (northwind, harborview, cedarridge) get sample briefings. Any other prospect gets a `partial` briefing with no facts and an uncertainty note, until live Tavily/People Data Labs/LLM providers are connected (Lane B). Nothing is invented.
+
 ## Local Development & Testing
 
 ```bash
 cd apps/api
-uv run --extra dev pytest -v
+uv run --extra dev pytest -v   # add --extra mongodb to use STORAGE_BACKEND=mongodb
 ```
 
 To run the local API server:

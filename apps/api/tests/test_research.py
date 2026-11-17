@@ -19,7 +19,7 @@ async def test_research_execution_and_caching(
     res = await client.post(
         f"/v1/lists/{list_id}/prospects",
         headers=auth_headers_seller1,
-        json={"name": "Maya Chen", "company": "Northstar Logistics", "role": "VP IT", "phone": "123", "notes": ""},
+        json={"name": "Dana Reyes", "company": "Northwind Logistics Sample Inc", "role": "VP IT", "phone": "123", "notes": ""},
     )
     prospect_id = res.json()[0]["id"]
 
