@@ -105,6 +105,17 @@ James (agents produce briefings) --> Srikar (backend stores & serves them) --> A
 - Changes to shared interfaces (briefing format, API contracts) are agreed between the affected owners before anyone edits them.
 - Use sample data until real connections are ready, and label it clearly as sample data.
 
+## Continuous integration
+
+GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every pull request and every push to `main`. It needs no secrets. Jobs:
+
+- `agents`: `pytest` for `apps/agents` (Python 3.12).
+- `api`: `pytest` for `apps/api` (Python 3.12, agents package installed first).
+- `web`: `npm ci`, typecheck, unit tests, and `next build` in `apps/web` (Node 22).
+- `web-e2e`: Playwright end-to-end tests against the local Next dev server (Chromium).
+
+PRs should be green before merging. Superseded runs on the same branch are cancelled automatically.
+
 ## Local development
 
 Use Node.js 22.13 or newer.
