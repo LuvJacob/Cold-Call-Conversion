@@ -38,6 +38,16 @@ def _uncertainty(b: Briefing) -> list[str]:
     return out
 
 
+NO_FACTS_SUMMARY = "No verified information was found yet for {name} at {company}. Verify details on the call."
+
+
+def _summary(b: Briefing) -> str:
+    if b.facts:
+        return b.summary
+    p = b.prospect
+    return NO_FACTS_SUMMARY.format(name=p.name, company=p.company)
+
+
 def to_frontend_brief(b: Briefing) -> dict[str, Any]:
     labels = {f.id: f.label for f in b.facts}
     return {
@@ -45,7 +55,7 @@ def to_frontend_brief(b: Briefing) -> dict[str, Any]:
         # frontend schema change agreed with Aanand.
         "mode": "demo",
         "preparedAt": b.generated_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "summary": b.summary,
+        "summary": _summary(b),
         "facts": [{"label": f.label, "text": _fact_text(f), "sourceIds": list(f.source_ids)} for f in b.facts],
         "sources": [
             {"id": s.id, "title": s.title, "publisher": s.publisher, "excerpt": s.excerpt, "url": s.url}

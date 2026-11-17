@@ -41,6 +41,10 @@ Set `AUTH_MODE` to one of:
 
 Any other value fails closed with `401`.
 
+Set `ENVIRONMENT` to say where the service runs. Dev auth (`AUTH_MODE=dev`) is only accepted when `ENVIRONMENT` is `development`, `local` or `test`; any other value refuses dev auth.
+
+> **Warning:** in any deployed environment set `AUTH_MODE=jwt` and `ENVIRONMENT=production`. `ENVIRONMENT` defaults to `development`, so leaving it unset keeps dev auth, which trusts the `X-Seller-ID` header.
+
 ## Research behaviour
 
 - `POST /v1/research` is idempotent: a prospect with a queued or running job for its current revision is skipped, so the response lists only newly created jobs.
@@ -51,6 +55,14 @@ Any other value fails closed with `401`.
 ```bash
 cd apps/api
 uv run --extra dev pytest -v   # add --extra mongodb to use STORAGE_BACKEND=mongodb
+```
+
+Without uv, use pip (the agents package is a local dependency):
+
+```bash
+cd apps/api
+python3 -m venv .venv && .venv/bin/pip install -e ../agents -e '.[dev]'
+.venv/bin/pytest -q
 ```
 
 To run the local API server:

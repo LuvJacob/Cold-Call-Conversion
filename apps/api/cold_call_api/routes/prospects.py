@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from cold_call_api.auth import get_current_seller_id
-from cold_call_api.csv_parser import parse_prospect_csv
+from cold_call_api.csv_parser import MAX_CSV_BYTES, parse_prospect_csv
 from cold_call_api.models import (
     CsvImportResponse,
     CsvImportRowError,
@@ -18,6 +18,15 @@ from cold_call_api.storage import get_repository
 from cold_call_api.storage.interface import StorageRepository
 
 router = APIRouter(prefix="/v1", tags=["Prospects"])
+
+
+async def _require_prospect(repo: StorageRepository, seller_id: str, prospect_id: str) -> None:
+    """404 unless the prospect exists for this seller (same answer for other sellers' ids)."""
+    if not await repo.get_prospect(seller_id, prospect_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prospect {prospect_id} not found.",
+        )
 
 
 @router.get("/lists/{list_id}/prospects", response_model=list[ProspectModel])
@@ -71,7 +80,12 @@ async def import_prospects_csv(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"List {list_id} not found.",
         )
-    content = await file.read()
+    content = await file.read(MAX_CSV_BYTES + 1)
+    if len(content) > MAX_CSV_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Choose a CSV smaller than 1 MB.",
+        )
     try:
         text = content.decode("utf-8")
     except UnicodeDecodeError:
@@ -84,10 +98,11 @@ async def import_prospects_csv(
             ) from err
 
     result = parse_prospect_csv(text)
-    if result.errors and not result.rows:
+    if (result.errors or result.row_errors) and not result.rows:
+        messages = list(result.errors) + [f"Row {n}: {m}" for n, m in result.row_errors]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="; ".join(result.errors),
+            detail="; ".join(messages),
         )
 
     created: list[ProspectModel] = []
@@ -95,15 +110,7 @@ async def import_prospects_csv(
     if result.rows:
         created, duplicates_skipped = await repo.create_prospects(seller_id, list_id, result.rows)
 
-    row_errors: list[CsvImportRowError] = []
-    for idx, msg in enumerate(result.errors):
-        row_num = idx + 1
-        if msg.startswith("Record "):
-            try:
-                row_num = int(msg.split(":")[0].replace("Record ", "").strip())
-            except Exception:
-                pass
-        row_errors.append(CsvImportRowError(row=row_num, message=msg))
+    row_errors = [CsvImportRowError(row=n, message=m) for n, m in result.row_errors]
     return CsvImportResponse(
         imported=created,
         rejectedRows=row_errors,
@@ -119,11 +126,12 @@ async def update_prospect(
     repo: Annotated[StorageRepository, Depends(get_repository)],
 ) -> ProspectModel:
     """Edit prospect details (bumps revision, clears prior brief)."""
+    await _require_prospect(repo, seller_id, prospect_id)
     updated = await repo.update_prospect(seller_id, prospect_id, data)
     if not updated:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Prospect not found or cannot be modified while on an active call.",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Prospect cannot be modified while on an active call.",
         )
     return updated
 
@@ -135,11 +143,12 @@ async def delete_prospect(
     repo: Annotated[StorageRepository, Depends(get_repository)],
 ) -> None:
     """Delete a prospect."""
+    await _require_prospect(repo, seller_id, prospect_id)
     deleted = await repo.delete_prospect(seller_id, prospect_id)
     if not deleted:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Prospect not found or cannot be deleted while on an active call.",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Prospect cannot be deleted while on an active call.",
         )
 
 
@@ -151,6 +160,7 @@ async def move_prospect(
     repo: Annotated[StorageRepository, Depends(get_repository)],
 ) -> dict[str, str]:
     """Reorder a prospect within its list."""
+    await _require_prospect(repo, seller_id, prospect_id)
     moved = await repo.move_prospect(seller_id, prospect_id, data.direction)
     if not moved:
         raise HTTPException(

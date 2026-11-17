@@ -33,6 +33,11 @@ async def connect_call(
     repo: Annotated[StorageRepository, Depends(get_repository)],
 ) -> ActiveCallModel:
     """Connect a call to a prospect. Only one call may be active at a time."""
+    if not await repo.get_prospect(seller_id, data.prospectId):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prospect {data.prospectId} not found.",
+        )
     try:
         return await repo.connect_call(seller_id, data.prospectId)
     except ValueError as err:
@@ -66,6 +71,11 @@ async def reset_prospect_call_status(
     repo: Annotated[StorageRepository, Depends(get_repository)],
 ) -> dict[str, str]:
     """Reset a prospect's callStatus back to ready."""
+    if not await repo.get_prospect(seller_id, prospect_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prospect {prospect_id} not found.",
+        )
     ok = await repo.reset_call(seller_id, prospect_id)
     if not ok:
         raise HTTPException(

@@ -5,6 +5,7 @@ Provides persistence over IBM Cloud Databases for MongoDB or local MongoDB.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 import uuid
 from typing import Any
@@ -23,7 +24,16 @@ from cold_call_api.models import (
     normalize_prospect_key,
     utc_now_iso,
 )
-from cold_call_api.storage.interface import StorageRepository
+from cold_call_api.config import settings
+from cold_call_api.storage.interface import StorageRepository, job_is_expired
+
+
+_ACTIVE = (ResearchStatusEnum.QUEUED.value, ResearchStatusEnum.RUNNING.value)
+_JOB_PROJECTION = {"_id": 0, "active": 0}
+
+
+def _job_model(doc: dict[str, Any] | None) -> ResearchJobModel | None:
+    return ResearchJobModel.model_validate(doc) if doc else None
 
 
 class MongoStorageRepository(StorageRepository):
@@ -45,6 +55,11 @@ class MongoStorageRepository(StorageRepository):
         self._completed_calls = self.db["completed_calls"]
         self._ensure_indexes()
 
+    @staticmethod
+    async def _run(fn: Any, *args: Any, **kwargs: Any) -> Any:
+        """Run a blocking pymongo call off the event loop."""
+        return await asyncio.to_thread(fn, *args, **kwargs)
+
     def _ensure_indexes(self) -> None:
         self._lists.create_index([("sellerId", 1), ("id", 1)], unique=True)
         self._prospects.create_index([("sellerId", 1), ("id", 1)], unique=True)
@@ -52,25 +67,52 @@ class MongoStorageRepository(StorageRepository):
         self._brief_cache.create_index([("prospectKey", 1)], unique=True)
         self._jobs.create_index([("sellerId", 1), ("prospectId", 1)])
         self._jobs.create_index([("status", 1)])
+        # At most one active (queued/running) job per prospect revision. `active` is set on insert
+        # and unset when the job finishes; a partial index on it enforces the constraint atomically.
+        self._jobs.create_index(
+            [("sellerId", 1), ("prospectId", 1), ("revision", 1)],
+            unique=True,
+            partialFilterExpression={"active": True},
+            name="one_active_job_per_revision",
+        )
         self._active_calls.create_index([("sellerId", 1)], unique=True)
         self._completed_calls.create_index([("sellerId", 1), ("idempotencyKey", 1)])
+        self._completed_calls.create_index([("sellerId", 1), ("endedAt", 1)])
+
+    async def ensure_default_list(self, seller_id: str) -> ListModel:
+        from pymongo.errors import DuplicateKeyError  # type: ignore[import-untyped]
+
+        existing = await self._run(
+            lambda: list(self._lists.find({"sellerId": seller_id}, {"_id": 0}).sort("id", 1).limit(1))
+        )
+        if existing:
+            return ListModel.model_validate(existing[0])
+        model = ListModel(id="list-default", sellerId=seller_id, name="My prospects")
+        try:
+            # Deterministic id + unique (sellerId, id) index makes concurrent calls converge.
+            await self._run(self._lists.insert_one, model.model_dump())
+            return model
+        except DuplicateKeyError:
+            doc = await self._run(self._lists.find_one, {"sellerId": seller_id, "id": "list-default"}, {"_id": 0})
+            return ListModel.model_validate(doc) if doc else model
 
     async def get_lists(self, seller_id: str) -> list[ListModel]:
-        cursor = self._lists.find({"sellerId": seller_id}, {"_id": 0})
-        return [ListModel.model_validate(doc) for doc in cursor]
+        docs = await self._run(lambda: list(self._lists.find({"sellerId": seller_id}, {"_id": 0})))
+        return [ListModel.model_validate(doc) for doc in docs]
 
     async def get_list(self, seller_id: str, list_id: str) -> ListModel | None:
-        doc = self._lists.find_one({"sellerId": seller_id, "id": list_id}, {"_id": 0})
+        doc = await self._run(self._lists.find_one, {"sellerId": seller_id, "id": list_id}, {"_id": 0})
         return ListModel.model_validate(doc) if doc else None
 
     async def create_list(self, seller_id: str, name: str) -> ListModel:
         list_id = f"list-{uuid.uuid4().hex[:8]}"
         model = ListModel(id=list_id, sellerId=seller_id, name=name.strip())
-        self._lists.insert_one(model.model_dump())
+        await self._run(self._lists.insert_one, model.model_dump())
         return model
 
     async def update_list(self, seller_id: str, list_id: str, name: str) -> ListModel | None:
-        res = self._lists.find_one_and_update(
+        res = await self._run(
+            self._lists.find_one_and_update,
             {"sellerId": seller_id, "id": list_id},
             {"$set": {"name": name.strip()}},
             return_document=True,
@@ -85,9 +127,9 @@ class MongoStorageRepository(StorageRepository):
             p = await self.get_prospect(seller_id, active.prospectId)
             if p and p.listId == list_id:
                 return False
-        res = self._lists.delete_one({"sellerId": seller_id, "id": list_id})
+        res = await self._run(self._lists.delete_one, {"sellerId": seller_id, "id": list_id})
         if res.deleted_count > 0:
-            self._prospects.delete_many({"sellerId": seller_id, "listId": list_id})
+            await self._run(self._prospects.delete_many, {"sellerId": seller_id, "listId": list_id})
             return True
         return False
 
@@ -95,11 +137,13 @@ class MongoStorageRepository(StorageRepository):
         query: dict[str, Any] = {"sellerId": seller_id}
         if list_id:
             query["listId"] = list_id
-        cursor = self._prospects.find(query, {"_id": 0}).sort([("listId", 1), ("position", 1)])
-        return [ProspectModel.model_validate(doc) for doc in cursor]
+        docs = await self._run(
+            lambda: list(self._prospects.find(query, {"_id": 0}).sort([("listId", 1), ("position", 1)]))
+        )
+        return [ProspectModel.model_validate(doc) for doc in docs]
 
     async def get_prospect(self, seller_id: str, prospect_id: str) -> ProspectModel | None:
-        doc = self._prospects.find_one({"sellerId": seller_id, "id": prospect_id}, {"_id": 0})
+        doc = await self._run(self._prospects.find_one, {"sellerId": seller_id, "id": prospect_id}, {"_id": 0})
         return ProspectModel.model_validate(doc) if doc else None
 
     async def create_prospects(
@@ -143,7 +187,7 @@ class MongoStorageRepository(StorageRepository):
             docs_to_insert.append(p.model_dump())
 
         if docs_to_insert:
-            self._prospects.insert_many(docs_to_insert)
+            await self._run(self._prospects.insert_many, docs_to_insert)
 
         return created, duplicates
 
@@ -154,12 +198,7 @@ class MongoStorageRepository(StorageRepository):
         if active and active.prospectId == prospect_id:
             return None
 
-        p = await self.get_prospect(seller_id, prospect_id)
-        if not p:
-            return None
-
         update_fields: dict[str, Any] = {
-            "revision": p.revision + 1,
             "brief": None,
             "researchStatus": ResearchStatusEnum.NOT_STARTED.value,
             "researchError": None,
@@ -175,9 +214,11 @@ class MongoStorageRepository(StorageRepository):
         if input_data.notes is not None:
             update_fields["notes"] = input_data.notes
 
-        doc = self._prospects.find_one_and_update(
+        # $inc is atomic, so concurrent edits each get a distinct revision.
+        doc = await self._run(
+            self._prospects.find_one_and_update,
             {"sellerId": seller_id, "id": prospect_id},
-            {"$set": update_fields},
+            {"$set": update_fields, "$inc": {"revision": 1}},
             return_document=True,
             projection={"_id": 0},
         )
@@ -187,7 +228,7 @@ class MongoStorageRepository(StorageRepository):
         active = await self.get_active_call(seller_id)
         if active and active.prospectId == prospect_id:
             return False
-        res = self._prospects.delete_one({"sellerId": seller_id, "id": prospect_id})
+        res = await self._run(self._prospects.delete_one, {"sellerId": seller_id, "id": prospect_id})
         return res.deleted_count > 0
 
     async def move_prospect(self, seller_id: str, prospect_id: str, direction: int) -> bool:
@@ -203,11 +244,11 @@ class MongoStorageRepository(StorageRepository):
             return False
         other = list_prospects[target_idx]
 
-        self._prospects.update_one(
-            {"sellerId": seller_id, "id": p.id}, {"$set": {"position": other.position}}
+        await self._run(
+            self._prospects.update_one, {"sellerId": seller_id, "id": p.id}, {"$set": {"position": other.position}}
         )
-        self._prospects.update_one(
-            {"sellerId": seller_id, "id": other.id}, {"$set": {"position": p.position}}
+        await self._run(
+            self._prospects.update_one, {"sellerId": seller_id, "id": other.id}, {"$set": {"position": p.position}}
         )
         return True
 
@@ -225,7 +266,8 @@ class MongoStorageRepository(StorageRepository):
             "brief": brief.model_dump() if brief else None,
             "researchError": error,
         }
-        res = self._prospects.update_one(
+        res = await self._run(
+            self._prospects.update_one,
             {"sellerId": seller_id, "id": prospect_id, "revision": revision},
             {"$set": update_fields},
         )
@@ -233,23 +275,26 @@ class MongoStorageRepository(StorageRepository):
         return res.matched_count > 0
 
     async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
-        doc = self._brief_cache.find_one({"prospectKey": prospect_key}, {"_id": 0})
+        doc = await self._run(self._brief_cache.find_one, {"prospectKey": prospect_key}, {"_id": 0})
         if not doc:
             return None
         saved_at = datetime.fromisoformat(doc["savedAt"])
         if datetime.now(timezone.utc) - saved_at > timedelta(days=max_age_days):
-            self._brief_cache.delete_one({"prospectKey": prospect_key})
+            await self._run(self._brief_cache.delete_one, {"prospectKey": prospect_key})
             return None
         return BriefModel.model_validate(doc["brief"])
 
     async def save_cached_briefing(self, prospect_key: str, brief: BriefModel) -> None:
-        self._brief_cache.update_one(
+        await self._run(
+            self._brief_cache.update_one,
             {"prospectKey": prospect_key},
             {"$set": {"brief": brief.model_dump(), "savedAt": utc_now_iso()}},
             upsert=True,
         )
 
     async def enqueue_research_jobs(self, seller_id: str, prospect_ids: list[str]) -> list[ResearchJobModel]:
+        from pymongo.errors import DuplicateKeyError  # type: ignore[import-untyped]
+
         jobs: list[ResearchJobModel] = []
         for pid in prospect_ids:
             p = await self.get_prospect(seller_id, pid)
@@ -258,23 +303,38 @@ class MongoStorageRepository(StorageRepository):
             active = await self.get_active_call(seller_id)
             if active and active.prospectId == pid:
                 continue
-            # Idempotent: a job for this exact revision is already in flight
-            if self._jobs.find_one(
-                {
-                    "sellerId": seller_id,
-                    "prospectId": pid,
-                    "revision": p.revision,
-                    "status": {
-                        "$in": [ResearchStatusEnum.QUEUED.value, ResearchStatusEnum.RUNNING.value]
-                    },
-                }
-            ):
-                continue
 
-            self._prospects.update_one(
-                {"sellerId": seller_id, "id": pid},
-                {"$set": {"researchStatus": ResearchStatusEnum.RUNNING.value, "researchError": None}},
+            # Fail any expired active job (crash/restart) so it no longer blocks this prospect.
+            existing = await self._run(
+                lambda: list(
+                    self._jobs.find(
+                        {
+                            "sellerId": seller_id,
+                            "prospectId": pid,
+                            "revision": p.revision,
+                            "status": {"$in": list(_ACTIVE)},
+                        },
+                        {"_id": 0},
+                    )
+                )
             )
+            for doc in existing:
+                if job_is_expired(
+                    doc.get("leaseExpiresAt"), doc.get("createdAt", ""), settings.research_lease_seconds
+                ):
+                    await self._run(
+                        self._jobs.update_one,
+                        {"id": doc["id"], "status": {"$in": list(_ACTIVE)}},
+                        {
+                            "$set": {
+                                "status": ResearchStatusEnum.FAILED.value,
+                                "lastError": "Job lease expired.",
+                                "leaseExpiresAt": None,
+                            },
+                            "$unset": {"active": ""},
+                        },
+                    )
+
             job = ResearchJobModel(
                 id=f"job-{uuid.uuid4().hex[:8]}",
                 prospectId=pid,
@@ -282,15 +342,31 @@ class MongoStorageRepository(StorageRepository):
                 revision=p.revision,
                 status=ResearchStatusEnum.QUEUED,
             )
-            self._jobs.insert_one(job.model_dump())
+            try:
+                # The partial unique index makes this the atomic "already queued" check.
+                await self._run(self._jobs.insert_one, {**job.model_dump(), "active": True})
+            except DuplicateKeyError:
+                continue
+
+            await self._run(
+                self._prospects.update_one,
+                {"sellerId": seller_id, "id": pid},
+                {"$set": {"researchStatus": ResearchStatusEnum.RUNNING.value, "researchError": None}},
+            )
             jobs.append(job)
         return jobs
 
-    async def claim_research_job(self, worker_id: str, lease_seconds: int = 90) -> ResearchJobModel | None:
+    async def claim_research_job(
+        self, worker_id: str, lease_seconds: int = 90, job_id: str | None = None
+    ) -> ResearchJobModel | None:
         now = datetime.now(timezone.utc)
         lease_exp = (now + timedelta(seconds=lease_seconds)).isoformat()
-        doc = self._jobs.find_one_and_update(
-            {"status": ResearchStatusEnum.QUEUED.value},
+        query: dict[str, Any] = {"status": ResearchStatusEnum.QUEUED.value}
+        if job_id is not None:
+            query["id"] = job_id
+        doc = await self._run(
+            self._jobs.find_one_and_update,
+            query,
             {
                 "$set": {
                     "status": ResearchStatusEnum.RUNNING.value,
@@ -300,31 +376,38 @@ class MongoStorageRepository(StorageRepository):
                 "$inc": {"attempts": 1},
             },
             return_document=True,
-            projection={"_id": 0},
+            projection=_JOB_PROJECTION,
         )
-        return ResearchJobModel.model_validate(doc) if doc else None
+        return _job_model(doc)
 
     async def finish_research_job(
         self, job_id: str, status: ResearchStatusEnum, error: str | None = None
     ) -> None:
-        self._jobs.update_one(
+        await self._run(
+            self._jobs.update_one,
             {"id": job_id},
-            {"$set": {"status": status.value, "lastError": error, "leaseExpiresAt": None}},
+            {
+                "$set": {"status": status.value, "lastError": error, "leaseExpiresAt": None},
+                "$unset": {"active": ""},
+            },
         )
 
     async def get_research_status(self, seller_id: str, prospect_id: str) -> ResearchJobModel | None:
-        doc = self._jobs.find_one(
+        doc = await self._run(
+            self._jobs.find_one,
             {"sellerId": seller_id, "prospectId": prospect_id},
-            {"_id": 0},
+            _JOB_PROJECTION,
             sort=[("createdAt", -1)],
         )
-        return ResearchJobModel.model_validate(doc) if doc else None
+        return _job_model(doc)
 
     async def get_active_call(self, seller_id: str) -> ActiveCallModel | None:
-        doc = self._active_calls.find_one({"sellerId": seller_id}, {"_id": 0})
+        doc = await self._run(self._active_calls.find_one, {"sellerId": seller_id}, {"_id": 0, "sellerId": 0})
         return ActiveCallModel.model_validate(doc) if doc else None
 
     async def connect_call(self, seller_id: str, prospect_id: str) -> ActiveCallModel:
+        from pymongo.errors import DuplicateKeyError  # type: ignore[import-untyped]
+
         p = await self.get_prospect(seller_id, prospect_id)
         if not p:
             raise ValueError(f"Prospect {prospect_id} not found.")
@@ -333,7 +416,10 @@ class MongoStorageRepository(StorageRepository):
             raise ValueError("A call is already active for this seller.")
 
         call = ActiveCallModel(prospectId=prospect_id, startedAt=utc_now_iso())
-        self._active_calls.insert_one({"sellerId": seller_id, **call.model_dump()})
+        try:
+            await self._run(self._active_calls.insert_one, {"sellerId": seller_id, **call.model_dump()})
+        except DuplicateKeyError as err:
+            raise ValueError("A call is already active for this seller.") from err
         return call
 
     async def end_call(
@@ -342,8 +428,10 @@ class MongoStorageRepository(StorageRepository):
         active = await self.get_active_call(seller_id)
         if not active:
             if idempotency_key:
-                doc = self._completed_calls.find_one(
-                    {"sellerId": seller_id, "idempotencyKey": idempotency_key}, {"_id": 0}
+                doc = await self._run(
+                    self._completed_calls.find_one,
+                    {"sellerId": seller_id, "idempotencyKey": idempotency_key},
+                    {"_id": 0},
                 )
                 return CompletedCallModel.model_validate(doc) if doc else None
             return None
@@ -357,9 +445,10 @@ class MongoStorageRepository(StorageRepository):
             outcome=outcome,
             idempotencyKey=idempotency_key,
         )
-        self._completed_calls.insert_one(completed.model_dump())
-        self._active_calls.delete_one({"sellerId": seller_id})
-        self._prospects.update_one(
+        await self._run(self._completed_calls.insert_one, completed.model_dump())
+        await self._run(self._active_calls.delete_one, {"sellerId": seller_id})
+        await self._run(
+            self._prospects.update_one,
             {"sellerId": seller_id, "id": active.prospectId},
             {"$set": {"callStatus": CallStatusEnum.CALLED.value, "outcome": outcome.value}},
         )
@@ -369,8 +458,16 @@ class MongoStorageRepository(StorageRepository):
         active = await self.get_active_call(seller_id)
         if active and active.prospectId == prospect_id:
             return False
-        res = self._prospects.update_one(
+        res = await self._run(
+            self._prospects.update_one,
             {"sellerId": seller_id, "id": prospect_id},
             {"$set": {"callStatus": CallStatusEnum.READY.value, "outcome": None}},
         )
-        return res.modified_count > 0
+        # matched_count: resetting an already-ready prospect is still a success
+        return res.matched_count > 0
+
+    async def list_completed_calls(self, seller_id: str) -> list[CompletedCallModel]:
+        docs = await self._run(
+            lambda: list(self._completed_calls.find({"sellerId": seller_id}, {"_id": 0}).sort("endedAt", 1))
+        )
+        return [CompletedCallModel.model_validate(doc) for doc in docs]

@@ -32,17 +32,17 @@ async def test_seller_isolation_lists_and_prospects(
     res = await client.get(f"/v1/lists/{s1_list_id}/prospects", headers=auth_headers_seller2)
     assert res.status_code == 404
 
-    # Seller 2 trying to update Seller 1's prospect returns 400/404
+    # Seller 2 trying to update Seller 1's prospect returns 404
     res = await client.patch(
         f"/v1/prospects/{s1_prospect_id}",
         headers=auth_headers_seller2,
         json={"name": "Hacked Name"},
     )
-    assert res.status_code == 400
+    assert res.status_code == 404
 
-    # Seller 2 trying to delete Seller 1's list returns 400/404
+    # Seller 2 trying to delete Seller 1's list returns 404
     res = await client.delete(f"/v1/lists/{s1_list_id}", headers=auth_headers_seller2)
-    assert res.status_code == 400
+    assert res.status_code == 404
 
     # Verify Seller 1's data remained untouched
     res = await client.get(f"/v1/lists/{s1_list_id}/prospects", headers=auth_headers_seller1)

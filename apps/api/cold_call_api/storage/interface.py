@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta, timezone
 from cold_call_api.models import (
     ActiveCallModel,
     BriefModel,
@@ -17,10 +18,33 @@ from cold_call_api.models import (
 )
 
 
+def _parse_iso(value: str) -> datetime:
+    dt = datetime.fromisoformat(value)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def job_is_expired(
+    lease_expires_at: str | None, created_at: str, lease_seconds: int, now: datetime | None = None
+) -> bool:
+    """An active job is expired when its lease ran out (or, with no lease, it is older than one lease)."""
+    now = now or datetime.now(timezone.utc)
+    try:
+        if lease_expires_at:
+            return now > _parse_iso(lease_expires_at)
+        return now > _parse_iso(created_at) + timedelta(seconds=lease_seconds)
+    except ValueError:
+        return True
+
+
 class StorageRepository(ABC):
     """Abstract interface defining all data operations required by the backend."""
 
     # --- Lists ---
+    @abstractmethod
+    async def ensure_default_list(self, seller_id: str) -> ListModel:
+        """Return the seller's first list, creating a default one if they have none. Idempotent."""
+        pass
+
     @abstractmethod
     async def get_lists(self, seller_id: str) -> list[ListModel]:
         pass
@@ -97,10 +121,15 @@ class StorageRepository(ABC):
     # --- Research Jobs Queue ---
     @abstractmethod
     async def enqueue_research_jobs(self, seller_id: str, prospect_ids: list[str]) -> list[ResearchJobModel]:
+        """Queue one job per prospect. Skips prospects with a live (unexpired) active job at the same
+        revision; expired active jobs are marked failed and replaced."""
         pass
 
     @abstractmethod
-    async def claim_research_job(self, worker_id: str, lease_seconds: int = 90) -> ResearchJobModel | None:
+    async def claim_research_job(
+        self, worker_id: str, lease_seconds: int = 90, job_id: str | None = None
+    ) -> ResearchJobModel | None:
+        """Atomically move a QUEUED job (a specific one if job_id is given) to RUNNING with a lease."""
         pass
 
     @abstractmethod
@@ -130,4 +159,9 @@ class StorageRepository(ABC):
 
     @abstractmethod
     async def reset_call(self, seller_id: str, prospect_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def list_completed_calls(self, seller_id: str) -> list[CompletedCallModel]:
+        """Completed calls for the seller, oldest first."""
         pass

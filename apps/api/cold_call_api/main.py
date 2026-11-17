@@ -19,8 +19,21 @@ logging.basicConfig(
 logger = logging.getLogger("cold_call_api")
 
 
+SAFE_DEV_ENVIRONMENTS = ("development", "local", "test")
+
+
+def check_auth_safety() -> None:
+    """Refuse to run header-trusting dev auth outside a development environment."""
+    if settings.auth_mode == "dev" and settings.environment.strip().lower() not in SAFE_DEV_ENVIRONMENTS:
+        raise RuntimeError(
+            f"AUTH_MODE=dev is not allowed when ENVIRONMENT={settings.environment!r}. "
+            "Set AUTH_MODE=jwt (with JWT_SECRET) or ENVIRONMENT=development."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    check_auth_safety()
     logger.info("Starting %s v%s in %s mode", settings.app_name, settings.app_version, settings.environment)
     yield
     logger.info("Shutting down %s", settings.app_name)

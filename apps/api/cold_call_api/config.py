@@ -24,7 +24,6 @@ class Settings(BaseModel):
         "http://127.0.0.1:3000",
     ]
     brief_cache_days: int = int(os.getenv("BRIEF_CACHE_DAYS", "30"))
-    max_research_attempts: int = int(os.getenv("MAX_RESEARCH_ATTEMPTS", "3"))
     research_lease_seconds: int = int(os.getenv("RESEARCH_LEASE_SECONDS", "90"))
     research_timeout_seconds: int = int(os.getenv("RESEARCH_TIMEOUT_SECONDS", "60"))
 

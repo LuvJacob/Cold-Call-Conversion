@@ -24,7 +24,8 @@ from cold_call_api.models import (
     normalize_prospect_key,
     utc_now_iso,
 )
-from cold_call_api.storage.interface import StorageRepository
+from cold_call_api.config import settings
+from cold_call_api.storage.interface import StorageRepository, job_is_expired
 
 
 class MemoryStorageRepository(StorageRepository):
@@ -51,14 +52,15 @@ class MemoryStorageRepository(StorageRepository):
 
         # Seed sample prospects matching frontend seed data
         seeds = [
-            ("p-maya", "Maya Chen", "Northstar Logistics", "VP of Information Technology", "list-outreach", ResearchStatusEnum.READY),
-            ("p-jordan", "Jordan Ellis", "Meridian Consulting", "Director of IT", "list-outreach", ResearchStatusEnum.READY),
-            ("p-alex", "Alex Morgan", "Atlas Manufacturing", "Head of Infrastructure", "list-outreach", ResearchStatusEnum.PARTIAL),
+            # No seeded prospect is READY/PARTIAL: that status requires a real brief, and none is attached.
+            ("p-maya", "Maya Chen", "Northstar Logistics", "VP of Information Technology", "list-outreach", ResearchStatusEnum.NOT_STARTED),
+            ("p-jordan", "Jordan Ellis", "Meridian Consulting", "Director of IT", "list-outreach", ResearchStatusEnum.NOT_STARTED),
+            ("p-alex", "Alex Morgan", "Atlas Manufacturing", "Head of Infrastructure", "list-outreach", ResearchStatusEnum.NOT_STARTED),
             ("p-sam", "Sam Rivera", "Cedar Health Systems", "IT Operations Manager", "list-outreach", ResearchStatusEnum.NOT_STARTED),
             ("p-priya", "Priya Shah", "Fieldwork Studio", "Chief Technology Officer", "list-outreach", ResearchStatusEnum.FAILED),
             ("p-eli", "Eli Brooks", "Harbor Financial", "Director of Technology", "list-outreach", ResearchStatusEnum.NOT_STARTED),
-            ("p-robin", "Robin Park", "Meridian Consulting", "Chief Operating Officer", "list-accounts", ResearchStatusEnum.READY),
-            ("p-taylor", "Taylor Reed", "Atlas Manufacturing", "IT Director", "list-accounts", ResearchStatusEnum.PARTIAL),
+            ("p-robin", "Robin Park", "Meridian Consulting", "Chief Operating Officer", "list-accounts", ResearchStatusEnum.NOT_STARTED),
+            ("p-taylor", "Taylor Reed", "Atlas Manufacturing", "IT Director", "list-accounts", ResearchStatusEnum.NOT_STARTED),
         ]
 
         for idx, (pid, name, company, role, lid, status) in enumerate(seeds):
@@ -81,6 +83,15 @@ class MemoryStorageRepository(StorageRepository):
             self._prospects[pid] = p
 
     # --- Lists ---
+    async def ensure_default_list(self, seller_id: str) -> ListModel:
+        async with self._lock:
+            existing = [l for l in self._lists.values() if l.sellerId == seller_id]
+            if existing:
+                return existing[0]
+            l = ListModel(id=f"list-{uuid.uuid4().hex[:8]}", sellerId=seller_id, name="My prospects")
+            self._lists[l.id] = l
+            return l
+
     async def get_lists(self, seller_id: str) -> list[ListModel]:
         async with self._lock:
             return [l for l in self._lists.values() if l.sellerId == seller_id]
@@ -306,13 +317,26 @@ class MemoryStorageRepository(StorageRepository):
                 active = self._active_calls.get(seller_id)
                 if active and active.prospectId == pid:
                     continue
-                # Idempotent: a job for this exact revision is already in flight
-                if any(
-                    j.prospectId == pid
-                    and j.revision == p.revision
-                    and j.status in (ResearchStatusEnum.QUEUED, ResearchStatusEnum.RUNNING)
-                    for j in self._jobs.values()
-                ):
+                # Idempotent: a live job for this exact revision is already in flight.
+                # Jobs whose lease expired (crash/restart) are failed and replaced.
+                live = False
+                for j in list(self._jobs.values()):
+                    if (
+                        j.prospectId == pid
+                        and j.revision == p.revision
+                        and j.status in (ResearchStatusEnum.QUEUED, ResearchStatusEnum.RUNNING)
+                    ):
+                        if job_is_expired(j.leaseExpiresAt, j.createdAt, settings.research_lease_seconds):
+                            self._jobs[j.id] = j.model_copy(
+                                update={
+                                    "status": ResearchStatusEnum.FAILED,
+                                    "lastError": "Job lease expired.",
+                                    "leaseExpiresAt": None,
+                                }
+                            )
+                        else:
+                            live = True
+                if live:
                     continue
 
                 # Set prospect status to RUNNING
@@ -332,11 +356,13 @@ class MemoryStorageRepository(StorageRepository):
                 created_jobs.append(job)
             return created_jobs
 
-    async def claim_research_job(self, worker_id: str, lease_seconds: int = 90) -> ResearchJobModel | None:
+    async def claim_research_job(
+        self, worker_id: str, lease_seconds: int = 90, job_id: str | None = None
+    ) -> ResearchJobModel | None:
         async with self._lock:
             now = datetime.now(timezone.utc)
             for j in self._jobs.values():
-                if j.status == ResearchStatusEnum.QUEUED:
+                if j.status == ResearchStatusEnum.QUEUED and (job_id is None or j.id == job_id):
                     lease_exp = (now + timedelta(seconds=lease_seconds)).isoformat()
                     claimed = j.model_copy(
                         update={
@@ -433,3 +459,8 @@ class MemoryStorageRepository(StorageRepository):
                 update={"callStatus": CallStatusEnum.READY, "outcome": None}
             )
             return True
+
+    async def list_completed_calls(self, seller_id: str) -> list[CompletedCallModel]:
+        async with self._lock:
+            calls = [c for c in self._completed_calls if c.sellerId == seller_id]
+            return sorted(calls, key=lambda c: c.endedAt)

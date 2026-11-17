@@ -60,7 +60,7 @@ class QuestionModel(BaseModel):
 class BriefModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    mode: Literal["demo", "live"] = "demo"
+    mode: Literal["demo"] = "demo"
     preparedAt: str
     summary: str
     facts: list[FactModel] = Field(default_factory=list)
@@ -170,6 +170,17 @@ class ActiveCallModel(BaseModel):
     startedAt: str = Field(default_factory=utc_now_iso)
 
 
+class WorkspaceCallModel(BaseModel):
+    """Completed call as the frontend workspaceSchema.calls expects it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prospectId: str
+    startedAt: str
+    endedAt: str
+    outcome: CallOutcomeEnum
+
+
 class CompletedCallModel(ActiveCallModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -236,7 +247,7 @@ class WorkspaceSummaryResponse(BaseModel):
     lists: list[ListModel]
     prospects: list[ProspectModel]
     activeCall: ActiveCallModel | None = None
-    calls: list[CompletedCallModel] = Field(default_factory=list)
+    calls: list[WorkspaceCallModel] = Field(default_factory=list)
 
 
 class CsvImportRowError(BaseModel):
