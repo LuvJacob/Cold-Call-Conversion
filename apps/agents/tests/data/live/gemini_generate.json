@@ -1,0 +1,5 @@
+{
+  "_comment": "FICTIONAL SAMPLE in the shape of a Gemini generateContent response.",
+  "candidates": [{"content": {"role": "model", "parts": [{"text": "Jordan Sample leads operations "}, {"text": "at Acme Robotics Sample Inc."}]}, "finishReason": "STOP"}],
+  "usageMetadata": {"promptTokenCount": 90, "candidatesTokenCount": 12, "totalTokenCount": 102}
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "FICTIONAL SAMPLE in the shape of a People Data Labs company enrich response (fields are flat, no data wrapper).",
+  "status": 200,
+  "likelihood": 9,
+  "name": "acme robotics sample inc",
+  "display_name": "Acme Robotics Sample Inc",
+  "website": "acme-robotics.example",
+  "industry": "Machinery",
+  "employee_count": 420,
+  "size": "201-500",
+  "founded": 2009,
+  "location": {"name": "austin, texas, united states", "locality": "Austin", "region": "Texas", "country": "United States", "street_address": "1 Private Way"}
+}
