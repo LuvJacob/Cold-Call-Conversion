@@ -1,7 +1,25 @@
 """Application configuration for Cold Call Conversion API (Lane C)."""
 
+import logging
 import os
 from pydantic import BaseModel, ConfigDict
+
+logger = logging.getLogger("cold_call_api.config")
+
+RESEARCH_MODES = ("", "free", "live")
+_warned_modes: set[str] = set()
+
+
+def research_mode(raw: str | None = None) -> str:
+    """Normalised RESEARCH_PROVIDERS: "", "free" or "live". Read at call time so tests and
+    deployments can change it; an unknown value is treated as unset with a one-time warning."""
+    value = (os.getenv("RESEARCH_PROVIDERS", "") if raw is None else raw).strip().lower()
+    if value in RESEARCH_MODES:
+        return value
+    if value not in _warned_modes:
+        _warned_modes.add(value)
+        logger.warning("Unknown RESEARCH_PROVIDERS value %r; treating as unset (allowed: free, live).", value[:20])
+    return ""
 
 
 class Settings(BaseModel):

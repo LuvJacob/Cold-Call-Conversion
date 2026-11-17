@@ -277,7 +277,9 @@ class MongoStorageRepository(StorageRepository):
         # matched_count: an identical rewrite still means the revision matched
         return res.matched_count > 0
 
-    async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
+    async def get_cached_entry(
+        self, prospect_key: str, max_age_days: int = 30
+    ) -> tuple[BriefModel, ResearchStatusEnum | None] | None:
         doc = await self._run(self._brief_cache.find_one, {"prospectKey": prospect_key}, {"_id": 0})
         if not doc:
             return None
@@ -285,13 +287,16 @@ class MongoStorageRepository(StorageRepository):
         if datetime.now(timezone.utc) - saved_at > timedelta(days=max_age_days):
             await self._run(self._brief_cache.delete_one, {"prospectKey": prospect_key})
             return None
-        return BriefModel.model_validate(doc["brief"])
+        stored = doc.get("status")
+        return BriefModel.model_validate(doc["brief"]), (ResearchStatusEnum(stored) if stored else None)
 
-    async def save_cached_briefing(self, prospect_key: str, brief: BriefModel) -> None:
+    async def save_cached_briefing(
+        self, prospect_key: str, brief: BriefModel, status: ResearchStatusEnum | None = None
+    ) -> None:
         await self._run(
             self._brief_cache.update_one,
             {"prospectKey": prospect_key},
-            {"$set": {"brief": brief.model_dump(), "savedAt": utc_now_iso()}},
+            {"$set": {"brief": brief.model_dump(), "savedAt": utc_now_iso(), "status": status.value if status else None}},
             upsert=True,
         )
 

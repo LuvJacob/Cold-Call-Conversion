@@ -89,11 +89,20 @@ python3 -m venv .venv && .venv/bin/pip install -e ../agents -e '.[dev]'
 
 ### Research providers
 
-By default the worker uses sample fixtures for the fictional sample prospects and gives every other prospect an empty (no-facts) brief, with no network calls. Set `RESEARCH_PROVIDERS=free` to research other prospects from free public sources (Wikidata/Wikipedia, SEC EDGAR, the company homepage; no API keys, no LLM). Related variables, all read from the worker's environment:
+`RESEARCH_PROVIDERS` (read from the worker's environment; the active mode is logged at startup) selects how prospects without a sample fixture are researched. Sample fixtures for the fictional sample prospects always win in every mode.
 
-- `RESEARCH_PROVIDERS`: `free` to enable; anything else (or unset) keeps the default.
-- `SEC_USER_AGENT`: descriptive User-Agent with contact info, required by SEC. Without it, EDGAR is skipped.
-- `RESEARCH_CONTACT`: optional contact text added to the generic User-Agent sent to Wikimedia and company sites.
+- unset (default): no network; non-sample prospects get an empty, partial brief.
+- `free`: free public sources (Wikidata/Wikipedia, SEC EDGAR, company homepage), no API keys, no LLM. Optional: `SEC_USER_AGENT` (required by SEC, otherwise EDGAR is skipped), `RESEARCH_CONTACT`.
+- `live`: paid providers via `cold_call_agents.live.build_live_providers`. Env vars: `TAVILY_API_KEY` (web search), `PDL_API_KEY` and `PDL_MIN_LIKELIHOOD` (people data), `LLM_PROVIDER` (`watsonx` default, or `gemini`), `WATSONX_API_KEY` + `WATSONX_URL` + `WATSONX_PROJECT_ID` (optional `WATSONX_MODEL_ID`, `WATSONX_API_VERSION`), or `GEMINI_API_KEY` (optional `GEMINI_MODEL`). Template: [`.env.example`](.env.example) (empty values; real keys only in the environment or an untracked `.env`).
+- Any other value is treated as unset, with a one-time warning.
+
+Fallbacks in `live`: a missing Tavily key uses free sources for search, a missing PDL key uses free sources for profiles, and a missing LLM setting uses template text. Each fallback is noted in the brief's uncertainty list, so partial key setups work.
+
+Caching: in `free` and `live` only complete (`ready`) briefs are cached, never partial ones, and the mode is part of the cache key, so a brief from one mode is never served after switching to another.
+
+Cost warning: `live` mode spends paid credits (Tavily, People Data Labs, watsonx.ai or Gemini) on every uncached research. A failed attempt is retried up to `RESEARCH_MAX_ATTEMPTS` times and each retry can repeat the paid calls, so lower it (for example to `1`) while testing.
+
+`GET /healthz/research` (requires the same authentication as the research routes) reports the mode and which providers are configured as booleans only, never key values, for example `{"mode":"live","tavily":true,"pdl":false,"llm":"watsonx","watsonx":false,"gemini":false}` (`watsonx` is true only when the key, an https URL and the project id are all set). With the variable unset, `mode` is `"default"`.
 
 Prospects may carry an optional `companyDomain` (see below). When set it is passed to the agents; otherwise the homepage fetched is the website Wikidata lists for the matched company. Details and limits: [apps/agents/README.md](../agents/README.md).
 

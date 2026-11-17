@@ -90,45 +90,58 @@ def build_live_providers(
         llm_notes.append(f"Unknown LLM_PROVIDER '{wanted[:20]}'; using watsonx.")
         wanted = "watsonx"
 
-    llm: Any = None
-    if wanted == "watsonx":
-        missing = [n for n in ("WATSONX_API_KEY", "WATSONX_URL", "WATSONX_PROJECT_ID") if not _val(env, n)]
-        if missing:
-            llm_notes.append(f"{', '.join(missing)} not set; using template text instead of watsonx.ai.")
-        elif not _val(env, "WATSONX_URL").lower().startswith("https://"):
-            llm_notes.append("WATSONX_URL must start with https://; using template text instead of watsonx.ai.")
+    built: list[Any] = []  # clients created so far, closed if a later build step fails
+    try:
+        llm: Any = None
+        if wanted == "watsonx":
+            missing = [n for n in ("WATSONX_API_KEY", "WATSONX_URL", "WATSONX_PROJECT_ID") if not _val(env, n)]
+            if missing:
+                llm_notes.append(f"{', '.join(missing)} not set; using template text instead of watsonx.ai.")
+            elif not _val(env, "WATSONX_URL").lower().startswith("https://"):
+                llm_notes.append("WATSONX_URL must start with https://; using template text instead of watsonx.ai.")
+            else:
+                llm = build_watsonx(
+                    _val(env, "WATSONX_API_KEY"), _val(env, "WATSONX_URL"), _val(env, "WATSONX_PROJECT_ID"),
+                    budget.timeout_seconds, model_id=_val(env, "WATSONX_MODEL_ID") or DEFAULT_MODEL_ID,
+                    api_version=_val(env, "WATSONX_API_VERSION") or DEFAULT_API_VERSION, transport=transport, **http_kw,
+                )
         else:
-            llm = build_watsonx(
-                _val(env, "WATSONX_API_KEY"), _val(env, "WATSONX_URL"), _val(env, "WATSONX_PROJECT_ID"),
-                budget.timeout_seconds, model_id=_val(env, "WATSONX_MODEL_ID") or DEFAULT_MODEL_ID,
-                api_version=_val(env, "WATSONX_API_VERSION") or DEFAULT_API_VERSION, transport=transport, **http_kw,
-            )
-    else:
-        if not _val(env, "GEMINI_API_KEY"):
-            llm_notes.append("GEMINI_API_KEY not set; using template text instead of Gemini.")
+            if not _val(env, "GEMINI_API_KEY"):
+                llm_notes.append("GEMINI_API_KEY not set; using template text instead of Gemini.")
+            else:
+                llm = build_gemini(
+                    _val(env, "GEMINI_API_KEY"), budget.timeout_seconds,
+                    model=_val(env, "GEMINI_MODEL") or DEFAULT_MODEL, transport=transport, **http_kw,
+                )
+        if llm is not None:
+            built.append(llm)
         else:
-            llm = build_gemini(
-                _val(env, "GEMINI_API_KEY"), budget.timeout_seconds,
-                model=_val(env, "GEMINI_MODEL") or DEFAULT_MODEL, transport=transport, **http_kw,
+            llm = TemplateLLM()
+            for n in llm_notes:
+                log.warning(n)
+
+        if _val(env, "TAVILY_API_KEY"):
+            search: Any = build_tavily(_val(env, "TAVILY_API_KEY"), budget.max_searches, budget.timeout_seconds, transport=transport, **http_kw)
+            built.append(search)
+        else:
+            search = _FreeFallback(free(), "TAVILY_API_KEY not set; web search used free public sources only.")
+
+        if _val(env, "PDL_API_KEY"):
+            profiles: Any = build_pdl(
+                _val(env, "PDL_API_KEY"), budget.timeout_seconds, min_likelihood=_min_likelihood(env),
+                transport=transport, today=(lambda: today) if today else date.today, **http_kw,
             )
-    if llm is None:
-        llm = TemplateLLM()
-        for n in llm_notes:
-            log.warning(n)
+            built.append(profiles)
+        else:
+            profiles = _FreeFallback(free(), "PDL_API_KEY not set; profiles came from free public sources only.")
 
-    if _val(env, "TAVILY_API_KEY"):
-        search: Any = build_tavily(_val(env, "TAVILY_API_KEY"), budget.max_searches, budget.timeout_seconds, transport=transport, **http_kw)
-    else:
-        search = _FreeFallback(free(), "TAVILY_API_KEY not set; web search used free public sources only.")
-
-    if _val(env, "PDL_API_KEY"):
-        profiles: Any = build_pdl(
-            _val(env, "PDL_API_KEY"), budget.timeout_seconds, min_likelihood=_min_likelihood(env),
-            transport=transport, today=(lambda: today) if today else date.today, **http_kw,
-        )
-    else:
-        profiles = _FreeFallback(free(), "PDL_API_KEY not set; profiles came from free public sources only.")
-
-    for n in llm_notes:  # surface LLM fallback notes where the researchers can read them
-        search.add_note(n)
+        for n in llm_notes:  # surface LLM fallback notes where the researchers can read them
+            search.add_note(n)
+    except BaseException:
+        for client in [*built, *(c[1] for c in free_cache)]:
+            try:
+                client.close()
+            except Exception:
+                log.exception("Could not close a provider after a failed build")
+        raise
     return llm, search, profiles
