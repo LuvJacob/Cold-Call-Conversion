@@ -288,6 +288,14 @@ def test_adapter_flags():
     assert research_status(run("northwind")[0]) == "ready"
 
 
+def test_adapter_zero_facts_summary_is_plain():
+    b, *_ = run("northwind")
+    b = b.model_copy(update={"facts": [], "sources": [], "talking_points": []})
+    summary = to_frontend_brief(b)["summary"]
+    assert "No verified information was found yet" in summary
+    assert "SAMPLE" not in summary and "0 sourced facts" not in summary
+
+
 def test_fixtures_are_marked_sample(key):
     from cold_call_agents.providers import load_fixture
     fx = load_fixture(key)

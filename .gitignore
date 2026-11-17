@@ -4,3 +4,10 @@ context/
 .env.*
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/

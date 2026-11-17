@@ -8,7 +8,7 @@ A browser-local frontend demo is available in `apps/web`. Product scope, team ro
 
 Next up: agree on the agent input/output format and API contracts, build the backend and agent services, and connect the frontend demo.
 
-Frontend setup: [apps/web/README.md](apps/web/README.md). Backend integration handoff: [docs/frontend-integration.md](docs/frontend-integration.md).
+Frontend setup: [apps/web/README.md](apps/web/README.md). Backend setup: [apps/api/README.md](apps/api/README.md). Agent setup: [apps/agents/README.md](apps/agents/README.md). Backend integration handoff: [docs/frontend-integration.md](docs/frontend-integration.md).
 
 ## How it works
 
