@@ -191,6 +191,7 @@ class MemoryStorageRepository(StorageRepository):
                     role=item.role,
                     phone=item.phone,
                     notes=item.notes,
+                    companyDomain=item.companyDomain,
                     position=max_pos,
                     revision=0,
                 )
@@ -227,6 +228,8 @@ class MemoryStorageRepository(StorageRepository):
                 updates["phone"] = input_data.phone
             if input_data.notes is not None:
                 updates["notes"] = input_data.notes
+            if input_data.companyDomain is not None:
+                updates["companyDomain"] = input_data.companyDomain or None
 
             updated = p.model_copy(update=updates)
             self._prospects[prospect_id] = updated
@@ -363,6 +366,8 @@ class MemoryStorageRepository(StorageRepository):
             now = datetime.now(timezone.utc)
             for j in self._jobs.values():
                 if j.status == ResearchStatusEnum.QUEUED and (job_id is None or j.id == job_id):
+                    if job_id is None and j.notBefore and datetime.fromisoformat(j.notBefore) > now:
+                        continue  # still in retry backoff
                     lease_exp = (now + timedelta(seconds=lease_seconds)).isoformat()
                     claimed = j.model_copy(
                         update={
@@ -370,11 +375,30 @@ class MemoryStorageRepository(StorageRepository):
                             "claimedBy": worker_id,
                             "leaseExpiresAt": lease_exp,
                             "attempts": j.attempts + 1,
+                            "notBefore": None,
                         }
                     )
                     self._jobs[j.id] = claimed
                     return claimed
             return None
+
+    async def requeue_research_job(
+        self, job_id: str, error: str, lease_seconds: int, delay_seconds: float = 0
+    ) -> bool:
+        async with self._lock:
+            j = self._jobs.get(job_id)
+            if not j or j.status != ResearchStatusEnum.RUNNING:
+                return False
+            now = datetime.now(timezone.utc)
+            self._jobs[job_id] = j.model_copy(
+                update={
+                    "status": ResearchStatusEnum.QUEUED,
+                    "lastError": error,
+                    "leaseExpiresAt": (now + timedelta(seconds=lease_seconds)).isoformat(),
+                    "notBefore": (now + timedelta(seconds=delay_seconds)).isoformat() if delay_seconds > 0 else None,
+                }
+            )
+            return True
 
     async def finish_research_job(
         self, job_id: str, status: ResearchStatusEnum, error: str | None = None
