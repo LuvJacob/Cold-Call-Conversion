@@ -1,0 +1,53 @@
+{
+ "name": "ACME ROBOTICS SAMPLE INC",
+ "sic": "3569",
+ "sicDescription": "General Industrial Machinery & Equipment, NEC",
+ "tickers": [
+  "ACME"
+ ],
+ "exchanges": [
+  "Nasdaq"
+ ],
+ "addresses": {
+  "business": {
+   "street1": "1 Sample Way",
+   "city": "SPRINGFIELD",
+   "stateOrCountry": "IL",
+   "zipCode": "62701"
+  }
+ },
+ "filings": {
+  "recent": {
+   "form": [
+    "8-K",
+    "10-Q",
+    "8-K",
+    "8-K"
+   ],
+   "filingDate": [
+    "2026-10-20",
+    "2026-10-15",
+    "2026-09-01",
+    "2024-01-05"
+   ],
+   "accessionNumber": [
+    "0000900001-26-000003",
+    "0000900001-26-000002",
+    "0000900001-26-000001",
+    "0000900001-24-000001"
+   ],
+   "primaryDocument": [
+    "a8k.htm",
+    "a10q.htm",
+    "b8k.htm",
+    "c8k.htm"
+   ],
+   "items": [
+    "2.02,9.01",
+    "",
+    "5.02",
+    "8.01"
+   ]
+  }
+ }
+}

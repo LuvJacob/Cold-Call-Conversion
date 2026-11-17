@@ -1,0 +1,397 @@
+{
+ "entities": {
+  "Q900001": {
+   "id": "Q900001",
+   "modified": "2026-09-30T12:00:00Z",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Acme Robotics Sample Inc"
+    }
+   },
+   "aliases": {
+    "en": []
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q4830453"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P452": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900101"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P159": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900102"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P571": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datavalue": {
+        "type": "time",
+        "value": {
+         "time": "+1998-00-00T00:00:00Z",
+         "precision": 9
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P856": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datavalue": {
+        "type": "string",
+        "value": "https://www.acme-robotics.example"
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P1128": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datavalue": {
+        "type": "quantity",
+        "value": {
+         "amount": "+800"
+        }
+       }
+      },
+      "rank": "normal",
+      "qualifiers": {
+       "P585": [
+        {
+         "snaktype": "value",
+         "datavalue": {
+          "type": "time",
+          "value": {
+           "time": "+2021-12-31T00:00:00Z",
+           "precision": 11
+          }
+         }
+        }
+       ]
+      }
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datavalue": {
+        "type": "quantity",
+        "value": {
+         "amount": "+1200"
+        }
+       }
+      },
+      "rank": "normal",
+      "qualifiers": {
+       "P585": [
+        {
+         "snaktype": "value",
+         "datavalue": {
+          "type": "time",
+          "value": {
+           "time": "+2025-12-31T00:00:00Z",
+           "precision": 11
+          }
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "P169": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900103"
+        }
+       }
+      },
+      "rank": "normal"
+     },
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900104"
+        }
+       }
+      },
+      "rank": "normal",
+      "qualifiers": {
+       "P582": [
+        {
+         "snaktype": "value",
+         "datavalue": {
+          "type": "time",
+          "value": {
+           "time": "+2019-01-01T00:00:00Z",
+           "precision": 9
+          }
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "P5531": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datavalue": {
+        "type": "string",
+        "value": "0000900001"
+       }
+      },
+      "rank": "normal"
+     }
+    ]
+   },
+   "sitelinks": {
+    "enwiki": {
+     "site": "enwiki",
+     "title": "Acme Robotics Sample"
+    }
+   }
+  },
+  "Q900002": {
+   "id": "Q900002",
+   "modified": "2026-09-30T12:00:00Z",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Acme Robotics Sample Inc"
+    }
+   },
+   "aliases": {
+    "en": []
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q4830453"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P452": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900101"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P856": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datavalue": {
+        "type": "string",
+        "value": "https://acme-robotics-other.example"
+       }
+      },
+      "rank": "normal"
+     }
+    ]
+   }
+  },
+  "Q900300": {
+   "id": "Q900300",
+   "modified": "2026-09-30T12:00:00Z",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Acme Robotics Sample Inc"
+    }
+   },
+   "aliases": {
+    "en": []
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q11424"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ]
+   }
+  },
+  "Q900200": {
+   "id": "Q900200",
+   "modified": "2026-09-30T12:00:00Z",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Pat Doe"
+    }
+   },
+   "aliases": {
+    "en": []
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q5"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P108": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900001"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P39": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900105"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ]
+   }
+  },
+  "Q900201": {
+   "id": "Q900201",
+   "modified": "2026-09-30T12:00:00Z",
+   "labels": {
+    "en": {
+     "language": "en",
+     "value": "Pat Doe"
+    }
+   },
+   "aliases": {
+    "en": []
+   },
+   "claims": {
+    "P31": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q5"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ],
+    "P108": [
+     {
+      "mainsnak": {
+       "snaktype": "value",
+       "datatype": "wikibase-item",
+       "datavalue": {
+        "type": "wikibase-entityid",
+        "value": {
+         "id": "Q900999"
+        }
+       }
+      },
+      "rank": "normal"
+     }
+    ]
+   }
+  }
+ }
+}

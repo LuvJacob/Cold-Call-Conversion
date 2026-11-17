@@ -65,6 +65,16 @@ python3 -m venv .venv && .venv/bin/pip install -e ../agents -e '.[dev]'
 .venv/bin/pytest -q
 ```
 
+### Research providers
+
+By default the worker uses sample fixtures for the fictional sample prospects and gives every other prospect an empty (no-facts) brief, with no network calls. Set `RESEARCH_PROVIDERS=free` to research other prospects from free public sources (Wikidata/Wikipedia, SEC EDGAR, the company homepage; no API keys, no LLM). Related variables, all read from the worker's environment:
+
+- `RESEARCH_PROVIDERS`: `free` to enable; anything else (or unset) keeps the default.
+- `SEC_USER_AGENT`: descriptive User-Agent with contact info, required by SEC. Without it, EDGAR is skipped.
+- `RESEARCH_CONTACT`: optional contact text added to the generic User-Agent sent to Wikimedia and company sites.
+
+Prospects do not carry a company domain yet, so the homepage fetched is the website Wikidata lists for the matched company. Details and limits: [apps/agents/README.md](../agents/README.md).
+
 To run the local API server:
 
 ```bash

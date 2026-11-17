@@ -2,7 +2,7 @@
 
 Python package `cold_call_agents`. It researches one prospect before a call and produces a briefing with a source on every claim. Design: [`docs/agent-design.md`](../../docs/agent-design.md).
 
-**Everything here runs on fictional SAMPLE data.** The three prospects in `cold_call_agents/fixtures/` are made up. There are no network calls, no API keys, and no `.env`.
+**Everything here runs on fictional SAMPLE data.** The three prospects in `cold_call_agents/fixtures/` are made up. By default there are no network calls, no API keys, and no `.env`. The optional free sources below make real network calls, but still need no API keys.
 
 ## Setup
 
@@ -38,6 +38,7 @@ Stdout is the frontend-shaped brief JSON. A "SAMPLE DATA ONLY" notice and the re
 - `writer.py`: builds the briefing (summary, talking points) through the LLM client; adds no new facts.
 - `adapter.py`: converts the internal briefing to the frontend `briefSchema` shape and computes research status.
 - `orchestrator.py`: plain code; runs both researchers in parallel with a time limit and search budget, then guardrails, verifier, writer. Returns a partial briefing if a researcher fails.
+- `free_sources/`: optional free public sources, no API keys (see below).
 - `cli.py`: command-line entry point for the samples.
 - `fixtures/`: the three fictional SAMPLE prospects (JSON).
 
@@ -50,6 +51,33 @@ Stdout is the frontend-shaped brief JSON. A "SAMPLE DATA ONLY" notice and the re
 - `ProfileClient`: People Data Labs.
 
 API keys belong only in the research worker's environment variables, never in code or the repo.
+
+## Free public sources (no API keys, no LLM)
+
+`free_sources/` implements `SearchClient` and `ProfileClient` over free public data, so the orchestrator, guardrails, verifier and writer run unchanged. Facts come from structured fields (deterministic), each with a source URL, publisher and date.
+
+- **Wikidata + Wikipedia** (`wikidata.py`): industry, headquarters, founded, official website, employee count (with its point-in-time date), current CEO, parent organization, plus the Wikipedia summary as an excerpt. If the company name matches more than one organization and the company domain does not settle it, nothing is returned and a note says so. Person facts only come from Wikidata when the name AND current employer both match exactly one person; otherwise person facts stay empty with a note.
+- **SEC EDGAR** (`edgar.py`): US public companies only. SIC industry, business city/state (never the street address), ticker, latest 10-K/10-Q, and up to 3 dated 8-K filings from the last year as news. Skipped entirely (logged once) when `SEC_USER_AGENT` is unset.
+- **Company homepage** (`homepage.py`): title and meta/og description, shown as "how the company describes itself" (attributed, not verified). Fetches only the prospect's company domain, or the website Wikidata lists for the matched company. It is https only, resolves the host and refuses non-public IPs (and connects to the validated IP), follows at most 3 same-host redirects, honors robots.txt, and uses a 5s timeout, a 1 MB cap and text/html only. At most one extra `/about` page, and only when the homepage has no description.
+- **`http.py`**: the shared client (timeouts, retry with backoff on 429/5xx, User-Agent, size cap, request count and time budget taken from `Budget`: `4 x max_searches` requests, `timeout_seconds` wall clock).
+
+Environment variables (all optional; never put values in the repo):
+
+| Variable | Meaning |
+|---|---|
+| `RESEARCH_PROVIDERS` | Read by the backend worker. `free` enables these sources for prospects with no sample fixture. Unset keeps the offline default. |
+| `SEC_USER_AGENT` | Descriptive User-Agent with contact info that SEC requires (for example `YourApp you@yourdomain`). Unset skips EDGAR. |
+| `RESEARCH_CONTACT` | Optional contact text appended to the generic `ColdCallConversion/0.1 (research prototype)` User-Agent used for Wikimedia and company sites. |
+
+Use it directly:
+
+```python
+from cold_call_agents.free_sources import build_free_providers
+llm, search, profiles = build_free_providers(prospect, Budget())   # reads the env vars above
+briefing = run_research(prospect, llm=llm, search=search, profiles=profiles, mode="live")
+```
+
+Limits: free sources rarely cover non-notable people, so person facts are usually empty; small or private companies often have no Wikidata entry; there is no news source except SEC 8-Ks; Wikidata facts can be old (each fact shows its date, and the verifier flags stale ones). The tests use fictional fixtures in `tests/data/free_sources/` and a mocked HTTP layer, so they run offline.
 
 ## Frontend limitation: `mode: "demo"`
 

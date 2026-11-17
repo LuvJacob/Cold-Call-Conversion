@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Any
 from cold_call_agents.adapter import research_status as calc_research_status, to_frontend_brief
 from cold_call_agents.models import Prospect as AgentProspect
 from cold_call_agents.orchestrator import Budget, run_research
+from cold_call_agents.free_sources import build_free_providers
 from cold_call_agents.providers import (
     FIXTURE_KEYS,
     MockLLM,
@@ -52,15 +54,26 @@ def _fixture_key_for(p: ProspectModel) -> str | None:
     return None
 
 
-def _get_providers_for_prospect(p: ProspectModel) -> tuple[Any, Any, Any]:
+def _free_sources_enabled() -> bool:
+    """RESEARCH_PROVIDERS=free turns on the no-key public sources (Wikidata, SEC EDGAR, company site)."""
+    return os.getenv("RESEARCH_PROVIDERS", "").strip().lower() == "free"
+
+
+def _get_providers_for_prospect(
+    p: ProspectModel, agent_prospect: AgentProspect | None = None, budget: Budget | None = None
+) -> tuple[Any, Any, Any]:
     """Resolve LLM, Search, and Profile providers for a prospect.
 
     Sample fixtures are used only for the exact fictional sample prospects (or an explicit
-    fixtureKey). Everything else gets empty providers (no facts) until live providers exist.
+    fixtureKey). Otherwise, with RESEARCH_PROVIDERS=free, the free public sources are used.
+    With the variable unset, everything else gets empty providers (no facts, no network).
     """
     matched_key = _fixture_key_for(p)
     if matched_key:
         return mocks_from_fixture(load_fixture(matched_key))
+
+    if agent_prospect is not None and _free_sources_enabled():
+        return build_free_providers(agent_prospect, budget or Budget())
 
     # No fixture and no live providers yet: return empty providers so the
     # briefing contains no facts rather than invented ones.
@@ -152,24 +165,34 @@ async def _run_job(repo: StorageRepository, job: ResearchJobModel) -> None:
         notes=prospect.notes or "",
         revision=prospect.revision,
     )
-    llm, search, profiles = _get_providers_for_prospect(prospect)
     budget = Budget(timeout_seconds=settings.research_timeout_seconds)
+    llm, search, profiles = _get_providers_for_prospect(prospect, agent_prospect, budget)
+    free = _free_sources_enabled() and _fixture_key_for(prospect) is None
 
     # Run research off the async loop in a worker thread
-    briefing = await asyncio.to_thread(
-        run_research,
-        agent_prospect,
-        llm=llm,
-        search=search,
-        profiles=profiles,
-        budget=budget,
-    )
+    try:
+        briefing = await asyncio.to_thread(
+            run_research,
+            agent_prospect,
+            llm=llm,
+            search=search,
+            profiles=profiles,
+            budget=budget,
+            mode="live" if free else "sample",
+        )
+    finally:
+        close = getattr(search, "close", None)  # free sources own an HTTP client
+        if close:
+            close()
 
     # Adapt to frontend brief schema
     brief_dict = to_frontend_brief(briefing)
     if not briefing.facts:
         brief_dict["uncertainty"].insert(
-            0, "No live research providers are connected yet, so no facts were gathered for this prospect."
+            0,
+            "Free public sources found no matching facts for this prospect."
+            if free
+            else "No live research providers are connected yet, so no facts were gathered for this prospect.",
         )
     brief_model = BriefModel.model_validate(brief_dict)
     raw_status = calc_research_status(briefing)
@@ -177,8 +200,9 @@ async def _run_job(repo: StorageRepository, job: ResearchJobModel) -> None:
         ResearchStatusEnum.PARTIAL if raw_status == "partial" or not briefing.facts else ResearchStatusEnum.READY
     )
 
-    # Only cache briefings that actually contain facts
-    if briefing.facts:
+    # Only cache briefings that actually contain facts (free-source briefings only when complete,
+    # so a transient network failure is not cached for the whole cache window)
+    if briefing.facts and not (free and status_enum != ResearchStatusEnum.READY):
         await repo.save_cached_briefing(pkey, brief_model)
 
     # Update prospect with stale guard
