@@ -109,7 +109,7 @@ Behavior worth knowing:
 - Privacy: PDL fields are read from an allowlist (name, current title, current employer, seniority, past employers, role start date; company name, website, industry, size, HQ city, founded). Personal emails, phones, home addresses and birth data are never read. Tavily text is sanitized (HTML, instruction-like sentences, phone numbers and addresses) before use.
 - Dates: `live/dates.py` converts ISO, RFC 2822, "2024-05", "May 3, 2024" and epoch values to `YYYY-MM-DD`; anything else is undated. PDL records carry no reliable "as of" date, so their source date is the lookup day (the excerpt says the underlying data date is unknown).
 - Token usage: `llm.usage` (`calls`, `input_tokens`, `output_tokens`) accumulates per client for later cost tracking.
-- Limit: Tavily results carry no pre-extracted `claims`, and `extract_claims` in `researchers.py` is still the v0 stub. Until an LLM extraction step is added there, live search results become sources but not facts; PDL facts work now. That change is in `researchers.py` and needs its own task.
+- Tavily results carry no pre-extracted `claims`; their facts come from LLM claim extraction (below), which needs a real LLM (watsonx or Gemini).
 - Limit: the watsonx `version` date and default model id could not be fully verified without a key; both are env-configurable.
 
 ## Evaluations and cost tracking
@@ -153,13 +153,33 @@ LLM_PROVIDER=gemini GEMINI_API_KEY=... \
 
 Compare `totals` (seconds, tokens, est cost) and per-case `checks` between the two JSON reports. Limits: live search results have no pre-extracted claims until the LLM extraction step exists, so live fact counts will be low; there is no LLM quality grading yet.
 
+## LLM claim extraction
+
+`extraction.py` turns free-text search results (no pre-extracted `claims`) into facts when a real LLM is available. Fixtures with `claims`, the template/mock LLMs and a missing LLM behave exactly as before (no extraction, no fake facts).
+
+The model returns a JSON array of `{key, value, quote}` per source. Prompts (`SYSTEM_PROMPT`, `USER_PROMPT`, `RETRY_SUFFIX`) are at the top of the module. Source text is sanitized (HTML, instruction-like sentences, private data) and placed inside a `<data>` block with `<`/`>` escaped; the model is told to ignore instructions in it. Precision over recall: every claim is checked, and dropped if any check fails:
+
+- the key is on the allowlist: person `current_role`, `tenure`, `recent_talk.*`; company `industry`, `employee_count`, `headquarters`, `recent_news.*`. Slugs for the `.*` keys are a hash of source and sentence derived in code, never the model's text;
+- the quote is exactly one full sentence of the sanitized content (`;` does not end a sentence; abbreviations like Inc., Jr., U.S. do not either; CJK full stops do). The fact text is that real sentence, not the model's string;
+- the sentence BEGINS with the subject (person: full name, optional middle initial; company: its name, possessive allowed; single-word company names are case-sensitive), after at most a short opener like "In 2024,". Name matching ignores accents, apostrophes and hyphen style. A longer name ("Apple Valley", "Jane Doe Smith") is rejected;
+- person keys: the sentence has no second person-like name, the value sits in the first clause (before ", and", " and <Name>", while, whereas, succeeded, replaced) after the subject with no other name in between, and for role/tenure any employer named (after at/for/of/with/by/from/joined/leads/runs/founded/heads) is the prospect's company;
+- company keys: no other capitalized proper noun besides the subject (months, days, U.S.-style abbreviations; for headquarters also its value), so "Acme competes with Globex, which employs 650 people" is dropped;
+- hedge, denial and past markers drop the claim for every key: not, n't, never, no longer, denied, rumor(s), reportedly, might, may, could, would, will, plans to, expected to, former, ex-, previously, until, left, retired, resigned, stepped down, succeeded, replaced, was (except "was promoted to/named/appointed" for roles). Roles and tenure also reject served, worked, held, spent, then, emeritus, interim, acting, incoming and year ranges; a role with an explicit year more than 2 years before the source date is dropped;
+- the value is a contiguous run of words in the sentence;
+- `employee_count` must be a number next to an employee/staff/people word, with no money, revenue, customers, users, other numbers, hypotheticals or place/site scope ("in Ohio", "at its plant");
+- the quote is not instruction-like or private.
+
+The fact's source is always the search result the model was shown (the model cannot add sources), and for LLM-extracted facts its excerpt (up to 600 chars) covers the matched sentence of every claim taken from that source. At most 4 claims per source.
+
+Limits: invalid JSON gets one retry with a stricter instruction, then a note in `missing`; an LLM exception is not retried and is noted as an LLM error; nothing escapes. `Budget.max_extraction_calls` (default 6, retries count) is per researcher: the person and the company researcher each get a copy, so the effective cap is 2x per briefing (12) until the orchestrator splits it. Matching is conservative (token and capitalization heuristics), so paraphrases, multi-sentence facts and sentences with extra capitalized names are dropped. Tests use a scripted fake LLM (`tests/test_extraction.py`, `tests/test_extraction_adversarial.py`).
+
 ## Frontend limitation: `mode: "demo"`
 
 The frontend `briefSchema` (`apps/web/src/lib/model.ts`) only accepts the literal `mode: "demo"`, so the adapter always emits `"demo"`. Showing live-mode briefings needs a frontend schema change agreed with Aanand.
 
 ## v0 limits
 
-- Facts come from profile records and the pre-extracted `claims` on fixture search results (a stand-in for LLM extraction).
+- Facts come from profile records, the pre-extracted `claims` on fixture search results, and guarded LLM extraction from live search text (see "LLM claim extraction").
 - Privacy filtering is simple regex/keyword rules.
 - Independent sources are counted by distinct publisher.
 - Staleness: role and company size are stale after 365 days; dated news (`recent_news.*`) is stale after 180 days and is then not used for talking points; a fact backed only by undated sources is stale.
