@@ -111,11 +111,20 @@ class StorageRepository(ABC):
 
     # --- Briefings Cache ---
     @abstractmethod
-    async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
+    async def get_cached_entry(
+        self, prospect_key: str, max_age_days: int = 30
+    ) -> tuple[BriefModel, ResearchStatusEnum | None] | None:
+        """Cached brief plus the research status stored with it (None for entries saved without one)."""
         pass
 
+    async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
+        entry = await self.get_cached_entry(prospect_key, max_age_days)
+        return entry[0] if entry else None
+
     @abstractmethod
-    async def save_cached_briefing(self, prospect_key: str, brief: BriefModel) -> None:
+    async def save_cached_briefing(
+        self, prospect_key: str, brief: BriefModel, status: ResearchStatusEnum | None = None
+    ) -> None:
         pass
 
     # --- Research Jobs Queue ---

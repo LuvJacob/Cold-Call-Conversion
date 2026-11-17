@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from cold_call_api.config import settings
+from cold_call_api.config import research_mode, settings
 from cold_call_api.routes import calls, health, lists, prospects, research
 
 # Structured logging setup
@@ -36,6 +36,7 @@ def check_auth_safety() -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     check_auth_safety()
     logger.info("Starting %s v%s in %s mode", settings.app_name, settings.app_version, settings.environment)
+    logger.info("Research providers mode: %s", research_mode() or "default (sample fixtures only)")
     yield
     logger.info("Shutting down %s", settings.app_name)
 

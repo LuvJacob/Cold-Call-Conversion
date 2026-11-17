@@ -106,3 +106,26 @@ def test_live_search_runs_through_factory_transport():
     _, search, _ = build({"TAVILY_API_KEY": "t"}, transport=rec.transport, free_providers=free_stub()[0])
     assert len(search.search("Acme Robotics Sample Inc about", 3)) == 2
     assert rec.requests[0].headers["authorization"] == "Bearer t"
+
+
+def test_failed_later_build_closes_clients_already_built(monkeypatch):
+    import pytest
+    from cold_call_agents.live import factory
+
+    closed = []
+    real_tavily = factory.build_tavily
+
+    def tavily_spy(*a, **k):
+        client = real_tavily(*a, **k)
+        orig = client.close
+        client.close = lambda: (closed.append("tavily"), orig())[1]
+        return client
+
+    def boom(*a, **k):
+        raise RuntimeError("pdl build failed")
+
+    monkeypatch.setattr(factory, "build_tavily", tavily_spy)
+    monkeypatch.setattr(factory, "build_pdl", boom)
+    with pytest.raises(RuntimeError, match="pdl build failed"):
+        build(FULL)
+    assert closed == ["tavily"]
