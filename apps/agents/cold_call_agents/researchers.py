@@ -148,6 +148,18 @@ def _safe_call(missing: list[str], what: str, fn, *args):
         return None
 
 
+def _provider_notes(subject: str, *providers) -> list[str]:
+    """Optional hook: providers that explain gaps (ambiguous match, failed source)
+    expose `notes(subject)`. The sample mocks do not, so they add nothing."""
+    out: list[str] = []
+    seen: list = []
+    for p in providers:
+        if hasattr(p, "notes") and not any(p is q for q in seen):
+            seen.append(p)
+            out.extend(n for n in p.notes(subject) if n not in out)
+    return out
+
+
 def research_person(
     prospect: Prospect,
     search: SearchClient,
@@ -185,6 +197,7 @@ def research_person(
     elif mentions:
         identity = "likely"
     else:
+        missing.extend(n for n in _provider_notes("person", search, profiles) if n not in missing)
         return "unsure", [], [], missing
 
     if identity == "confirmed":
@@ -200,6 +213,7 @@ def research_person(
 
     if not any(f.key == "current_role" for f in col.facts):
         missing.append("Current role could not be found.")
+    missing.extend(n for n in _provider_notes("person", search, profiles) if n not in missing)
     return identity, col.facts, col.sources, missing
 
 
@@ -239,4 +253,5 @@ def research_company(
         missing.append("Company size could not be found.")
     if not any(f.key.startswith("recent_news") for f in col.facts):
         missing.append("No recent company news found.")
+    missing.extend(n for n in _provider_notes("company", search, profiles) if n not in missing)
     return col.facts, col.sources, missing

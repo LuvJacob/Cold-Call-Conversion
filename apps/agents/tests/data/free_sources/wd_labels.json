@@ -1,0 +1,60 @@
+{
+ "entities": {
+  "Q900101": {
+   "id": "Q900101",
+   "labels": {
+    "en": {
+     "value": "industrial robotics"
+    }
+   }
+  },
+  "Q900102": {
+   "id": "Q900102",
+   "labels": {
+    "en": {
+     "value": "Springfield"
+    }
+   }
+  },
+  "Q900103": {
+   "id": "Q900103",
+   "labels": {
+    "en": {
+     "value": "Pat Doe"
+    }
+   }
+  },
+  "Q900104": {
+   "id": "Q900104",
+   "labels": {
+    "en": {
+     "value": "Former Person"
+    }
+   }
+  },
+  "Q900105": {
+   "id": "Q900105",
+   "labels": {
+    "en": {
+     "value": "Head of Sample Research"
+    }
+   }
+  },
+  "Q900001": {
+   "id": "Q900001",
+   "labels": {
+    "en": {
+     "value": "Acme Robotics Sample Inc"
+    }
+   }
+  },
+  "Q900999": {
+   "id": "Q900999",
+   "labels": {
+    "en": {
+     "value": "Some Other Company"
+    }
+   }
+  }
+ }
+}
