@@ -47,6 +47,10 @@ services:
       MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@172.29.77.2:27017/?authSource=admin
       MONGODB_DB_NAME: ${MONGODB_DB_NAME:-cold_call_conversion}
       BIND_HOST: 172.29.77.10
+      # Research mode: free (default here; real public lookups, no keys), live (paid keys), or empty (offline samples).
+      RESEARCH_PROVIDERS: ${RESEARCH_PROVIDERS-free}  # "-" not ":-": an explicit empty value means offline samples
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-}
+      RESEARCH_CONTACT: ${RESEARCH_CONTACT:-}
     ports:
       - "127.0.0.1:8000:8000"
     networks:
