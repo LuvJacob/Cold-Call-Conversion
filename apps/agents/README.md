@@ -171,7 +171,7 @@ The model returns a JSON array of `{key, value, quote}` per source. Prompts (`SY
 
 The fact's source is always the search result the model was shown (the model cannot add sources), and for LLM-extracted facts its excerpt (up to 600 chars) covers the matched sentence of every claim taken from that source. At most 4 claims per source.
 
-Limits: invalid JSON gets one retry with a stricter instruction, then a note in `missing`; an LLM exception is not retried and is noted as an LLM error; nothing escapes. `Budget.max_extraction_calls` (default 6, retries count) is per researcher: the person and the company researcher each get a copy, so the effective cap is 2x per briefing (12) until the orchestrator splits it. Matching is conservative (token and capitalization heuristics), so paraphrases, multi-sentence facts and sentences with extra capitalized names are dropped. Tests use a scripted fake LLM (`tests/test_extraction.py`, `tests/test_extraction_adversarial.py`).
+Limits: invalid JSON gets one retry with a stricter instruction, then a note in `missing`; an LLM exception is not retried and is noted as an LLM error; nothing escapes. `Budget.max_extraction_calls` (default 6, retries count) is the total per briefing: the orchestrator splits it between the person researcher (rounded up) and the company researcher (rounded down), so an odd cap still sums to the cap and caps 0 and 1 work (cap 1 goes to the person researcher). Matching is conservative (token and capitalization heuristics), so paraphrases, multi-sentence facts and sentences with extra capitalized names are dropped. Tests use a scripted fake LLM (`tests/test_extraction.py`, `tests/test_extraction_adversarial.py`).
 
 ## Frontend limitation: `mode: "demo"`
 

@@ -26,9 +26,9 @@ class Budget:
     max_searches: int = 6
     timeout_seconds: float = 60
     max_profile_lookups: int = 2
-    # LLM claim-extraction calls (retries count). Per researcher: the person and
-    # company researchers each get a copy, so the effective cap is 2x per briefing
-    # until the orchestrator splits it.
+    # LLM claim-extraction calls per briefing (retries count). The orchestrator
+    # splits it between the person (ceil) and company (floor) researchers, so the
+    # total never exceeds it. Called directly, a researcher uses the whole value.
     max_extraction_calls: int = 6
 
 
