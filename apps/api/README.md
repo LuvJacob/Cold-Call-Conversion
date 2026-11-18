@@ -50,6 +50,31 @@ Set `ENVIRONMENT` to say where the service runs. Dev auth (`AUTH_MODE=dev`) is o
 - `POST /v1/research` is idempotent: a prospect with a queued or running job for its current revision is skipped, so the response lists only newly created jobs.
 - Prospects that match a sample fixture (northwind, harborview, cedarridge) get sample briefings. Any other prospect gets a `partial` briefing with no facts and an uncertainty note, until live Tavily/People Data Labs/LLM providers are connected (Lane B). Nothing is invented.
 
+## Run with Docker (API + MongoDB + web)
+
+From the repo root:
+
+```bash
+cp .env.example .env     # set MONGO_ROOT_PASSWORD to a long random value (letters and digits)
+docker compose up --build
+```
+
+The API runs on http://127.0.0.1:8000 with `ENVIRONMENT=development`, `AUTH_MODE=dev` and `STORAGE_BACKEND=mongodb`, talking to the compose MongoDB (credentials from `.env`, which is git-ignored). `docker compose down -v` also removes the database volume. The API image (`apps/api/Dockerfile`) must be built with the **repository root** as context because it installs `apps/agents`; compose does this for you. It needs `BIND_HOST` (a specific address) and has no all-interfaces default.
+
+Local development only. For deployed use set `AUTH_MODE=jwt`, `JWT_SECRET`, `ENVIRONMENT=production`, and a TLS `MONGODB_URI` (for example IBM Cloud Databases for MongoDB). `STORAGE_BACKEND=mongodb` without `MONGODB_URI` refuses to start instead of silently using the in-memory store.
+
+### MongoDB storage tests
+
+`tests/test_mongo_storage.py` runs the storage layer (and one HTTP flow) against a real MongoDB. It is **skipped unless `MONGO_URL` is set**, so normal `pytest` runs stay offline. Each run uses a throwaway database that is dropped afterwards.
+
+```bash
+docker compose up -d mongo
+set -a; . ./.env; set +a      # from the repo root
+cd apps/api
+export MONGO_URL="mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@127.0.0.1:27017/?authSource=admin"
+uv run --extra dev --extra mongodb pytest tests/test_mongo_storage.py -v
+```
+
 ## Local Development & Testing
 
 ```bash

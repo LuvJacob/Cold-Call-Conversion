@@ -2,6 +2,7 @@ context/
 .DS_Store
 .env
 .env.*
+!.env.example
 CLAUDE.local.md
 .claude/settings.local.json
 

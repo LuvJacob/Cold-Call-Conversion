@@ -1,0 +1,95 @@
+name: cold-call
+
+# One-command local stack:  cp .env.example .env  &&  docker compose up --build
+# Local development only. See README "Run locally with Docker".
+#
+# Network notes (IBM security policy): services bind to specific internal IPs on a
+# private network (never 0.0.0.0) and host ports are published on 127.0.0.1 only.
+# Traffic between containers is plain TCP inside that private network; use TLS
+# (IBM Cloud Databases for MongoDB) for anything beyond a laptop.
+
+services:
+  mongo:
+    image: quay.io/mongodb/mongodb-community-server:8.0-ubi9
+    command: ["mongod", "--bind_ip", "127.0.0.1,172.29.77.2"]
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?copy .env.example to .env}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?copy .env.example to .env}
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+    networks:
+      default:
+        ipv4_address: 172.29.77.2
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mongosh --quiet -u "$$MONGODB_INITDB_ROOT_USERNAME" -p "$$MONGODB_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand('ping').ok" | grep -q 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+    security_opt: ["no-new-privileges:true"]
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      AUTH_MODE: dev
+      STORAGE_BACKEND: mongodb
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@172.29.77.2:27017/?authSource=admin
+      MONGODB_DB_NAME: ${MONGODB_DB_NAME:-cold_call_conversion}
+      BIND_HOST: 172.29.77.10
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      default:
+        ipv4_address: 172.29.77.10
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://172.29.77.10:8000/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  web:
+    build:
+      context: apps/web
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      BIND_HOST: 172.29.77.11
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      default:
+        ipv4_address: 172.29.77.11
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://172.29.77.11:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    read_only: true
+    tmpfs: [/tmp, /opt/app-root/src/.next/cache]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  mongo-data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.77.0/24
