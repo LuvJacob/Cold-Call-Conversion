@@ -12,6 +12,10 @@ from cold_call_api.storage.memory import MemoryStorageRepository
 @pytest.fixture(autouse=True)
 def reset_storage(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure a clean, isolated repository is used for every test."""
+    # Tests stay offline even if the shell has the research settings from .env (the README sources it
+    # for the Mongo tests). Tests that need a mode set it themselves with monkeypatch.setenv.
+    for name in ("RESEARCH_PROVIDERS", "SEC_USER_AGENT", "RESEARCH_CONTACT"):
+        monkeypatch.delenv(name, raising=False)
     # Failures are final by default so existing tests stay fast; retry tests opt in.
     monkeypatch.setattr(settings, "research_max_attempts", 1)
     monkeypatch.setattr(settings, "research_retry_base_seconds", 0.0)
