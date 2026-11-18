@@ -1,0 +1,96 @@
+{
+  "id": "ambiguous_company",
+  "description": "Two different companies share the name; sizes disagree and must be flagged, not merged.",
+  "tags": [
+    "ambiguous-company",
+    "conflicting"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-ambiguous",
+    "name": "Evan Pruitt",
+    "company": "Mercury Sample Systems",
+    "role": "VP of Sales",
+    "company_domain": null,
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": null,
+    "company": null
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "about"
+      ],
+      "title": "Mercury Sample Systems: aerospace electronics (sample)",
+      "url": "https://mercury-aero-sample.example/about",
+      "publisher": "Mercury Aero (company site, sample)",
+      "published_date": "2026-06-10",
+      "content": "Mercury Sample Systems builds aerospace electronics with about 120 employees.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "employee_count",
+          "label": "Company size",
+          "text": "About 120 employees.",
+          "value": "120"
+        }
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": [
+        "about"
+      ],
+      "title": "Mercury Sample Systems: payments (sample)",
+      "url": "https://mercury-pay-sample.example/about",
+      "publisher": "Mercury Pay (company site, sample)",
+      "published_date": "2026-07-02",
+      "content": "Mercury Sample Systems is a payments processor with about 4,500 employees.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "employee_count",
+          "label": "Company size",
+          "text": "About 4,500 employees.",
+          "value": "4500"
+        }
+      ]
+    },
+    {
+      "sample": true,
+      "keywords": [
+        "talks"
+      ],
+      "title": "Evan Pruitt joins sales panel (sample)",
+      "url": "https://sample-sales-events.example/pruitt",
+      "publisher": "Sample Sales Events",
+      "published_date": "2026-05-01",
+      "content": "Evan Pruitt, VP of Sales at Mercury Sample Systems, joined a panel on channel sales.",
+      "claims": [
+        {
+          "subject": "person",
+          "key": "current_role",
+          "label": "Current role",
+          "text": "VP of Sales at Mercury Sample Systems.",
+          "value": "VP of Sales"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "likely"
+    ],
+    "min_facts": 2,
+    "max_facts": 8,
+    "must_flag_uncertainty": true,
+    "must_have_status": [
+      "conflicting"
+    ]
+  }
+}

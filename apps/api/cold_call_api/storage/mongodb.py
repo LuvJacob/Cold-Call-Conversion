@@ -186,6 +186,7 @@ class MongoStorageRepository(StorageRepository):
                 role=item.role,
                 phone=item.phone,
                 notes=item.notes,
+                companyDomain=item.companyDomain,
                 position=max_pos,
                 revision=0,
             )
@@ -219,6 +220,8 @@ class MongoStorageRepository(StorageRepository):
             update_fields["phone"] = input_data.phone
         if input_data.notes is not None:
             update_fields["notes"] = input_data.notes
+        if input_data.companyDomain is not None:
+            update_fields["companyDomain"] = input_data.companyDomain or None
 
         # $inc is atomic, so concurrent edits each get a distinct revision.
         doc = await self._run(
@@ -280,7 +283,9 @@ class MongoStorageRepository(StorageRepository):
         # matched_count: an identical rewrite still means the revision matched
         return res.matched_count > 0
 
-    async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
+    async def get_cached_entry(
+        self, prospect_key: str, max_age_days: int = 30
+    ) -> tuple[BriefModel, ResearchStatusEnum | None] | None:
         doc = await self._run(self._brief_cache.find_one, {"prospectKey": prospect_key}, {"_id": 0})
         if not doc:
             return None
@@ -288,13 +293,16 @@ class MongoStorageRepository(StorageRepository):
         if datetime.now(timezone.utc) - saved_at > timedelta(days=max_age_days):
             await self._run(self._brief_cache.delete_one, {"prospectKey": prospect_key})
             return None
-        return BriefModel.model_validate(doc["brief"])
+        stored = doc.get("status")
+        return BriefModel.model_validate(doc["brief"]), (ResearchStatusEnum(stored) if stored else None)
 
-    async def save_cached_briefing(self, prospect_key: str, brief: BriefModel) -> None:
+    async def save_cached_briefing(
+        self, prospect_key: str, brief: BriefModel, status: ResearchStatusEnum | None = None
+    ) -> None:
         await self._run(
             self._brief_cache.update_one,
             {"prospectKey": prospect_key},
-            {"$set": {"brief": brief.model_dump(), "savedAt": utc_now_iso()}},
+            {"$set": {"brief": brief.model_dump(), "savedAt": utc_now_iso(), "status": status.value if status else None}},
             upsert=True,
         )
 
@@ -370,6 +378,8 @@ class MongoStorageRepository(StorageRepository):
         query: dict[str, Any] = {"status": ResearchStatusEnum.QUEUED.value}
         if job_id is not None:
             query["id"] = job_id
+        else:  # a poller must not take jobs still in retry backoff (missing/None notBefore matches None)
+            query["$or"] = [{"notBefore": None}, {"notBefore": {"$lte": now.isoformat()}}]
         doc = await self._run(
             self._jobs.find_one_and_update,
             query,
@@ -378,6 +388,7 @@ class MongoStorageRepository(StorageRepository):
                     "status": ResearchStatusEnum.RUNNING.value,
                     "claimedBy": worker_id,
                     "leaseExpiresAt": lease_exp,
+                    "notBefore": None,
                 },
                 "$inc": {"attempts": 1},
             },
@@ -385,6 +396,26 @@ class MongoStorageRepository(StorageRepository):
             projection=_JOB_PROJECTION,
         )
         return _job_model(doc)
+
+    async def requeue_research_job(
+        self, job_id: str, error: str, lease_seconds: int, delay_seconds: float = 0
+    ) -> bool:
+        now = datetime.now(timezone.utc)
+        lease_exp = (now + timedelta(seconds=lease_seconds)).isoformat()
+        not_before = (now + timedelta(seconds=delay_seconds)).isoformat() if delay_seconds > 0 else None
+        res = await self._run(
+            self._jobs.update_one,
+            {"id": job_id, "status": ResearchStatusEnum.RUNNING.value},
+            {
+                "$set": {
+                    "status": ResearchStatusEnum.QUEUED.value,
+                    "lastError": error,
+                    "leaseExpiresAt": lease_exp,
+                    "notBefore": not_before,
+                }
+            },
+        )
+        return res.matched_count > 0
 
     async def finish_research_job(
         self, job_id: str, status: ResearchStatusEnum, error: str | None = None

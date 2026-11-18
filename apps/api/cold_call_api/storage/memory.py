@@ -35,7 +35,7 @@ class MemoryStorageRepository(StorageRepository):
         self._lock = asyncio.Lock()
         self._lists: dict[str, ListModel] = {}  # id -> ListModel
         self._prospects: dict[str, ProspectModel] = {}  # id -> ProspectModel
-        self._brief_cache: dict[str, tuple[BriefModel, datetime]] = {}  # prospect_key -> (brief, saved_at)
+        self._brief_cache: dict[str, tuple[BriefModel, datetime, ResearchStatusEnum | None]] = {}  # prospect_key -> (brief, saved_at, status)
         self._jobs: dict[str, ResearchJobModel] = {}  # job_id -> ResearchJobModel
         self._active_calls: dict[str, ActiveCallModel] = {}  # seller_id -> ActiveCallModel
         self._completed_calls: list[CompletedCallModel] = []
@@ -191,6 +191,7 @@ class MemoryStorageRepository(StorageRepository):
                     role=item.role,
                     phone=item.phone,
                     notes=item.notes,
+                    companyDomain=item.companyDomain,
                     position=max_pos,
                     revision=0,
                 )
@@ -227,6 +228,8 @@ class MemoryStorageRepository(StorageRepository):
                 updates["phone"] = input_data.phone
             if input_data.notes is not None:
                 updates["notes"] = input_data.notes
+            if input_data.companyDomain is not None:
+                updates["companyDomain"] = input_data.companyDomain or None
 
             updated = p.model_copy(update=updates)
             self._prospects[prospect_id] = updated
@@ -290,20 +293,24 @@ class MemoryStorageRepository(StorageRepository):
             return True
 
     # --- Briefings Cache ---
-    async def get_cached_briefing(self, prospect_key: str, max_age_days: int = 30) -> BriefModel | None:
+    async def get_cached_entry(
+        self, prospect_key: str, max_age_days: int = 30
+    ) -> tuple[BriefModel, ResearchStatusEnum | None] | None:
         async with self._lock:
             entry = self._brief_cache.get(prospect_key)
             if not entry:
                 return None
-            brief, saved_at = entry
+            brief, saved_at, status = entry
             if datetime.now(timezone.utc) - saved_at > timedelta(days=max_age_days):
                 del self._brief_cache[prospect_key]
                 return None
-            return brief
+            return brief, status
 
-    async def save_cached_briefing(self, prospect_key: str, brief: BriefModel) -> None:
+    async def save_cached_briefing(
+        self, prospect_key: str, brief: BriefModel, status: ResearchStatusEnum | None = None
+    ) -> None:
         async with self._lock:
-            self._brief_cache[prospect_key] = (brief, datetime.now(timezone.utc))
+            self._brief_cache[prospect_key] = (brief, datetime.now(timezone.utc), status)
 
     # --- Research Jobs Queue ---
     async def enqueue_research_jobs(self, seller_id: str, prospect_ids: list[str]) -> list[ResearchJobModel]:
@@ -363,6 +370,8 @@ class MemoryStorageRepository(StorageRepository):
             now = datetime.now(timezone.utc)
             for j in self._jobs.values():
                 if j.status == ResearchStatusEnum.QUEUED and (job_id is None or j.id == job_id):
+                    if job_id is None and j.notBefore and datetime.fromisoformat(j.notBefore) > now:
+                        continue  # still in retry backoff
                     lease_exp = (now + timedelta(seconds=lease_seconds)).isoformat()
                     claimed = j.model_copy(
                         update={
@@ -370,11 +379,30 @@ class MemoryStorageRepository(StorageRepository):
                             "claimedBy": worker_id,
                             "leaseExpiresAt": lease_exp,
                             "attempts": j.attempts + 1,
+                            "notBefore": None,
                         }
                     )
                     self._jobs[j.id] = claimed
                     return claimed
             return None
+
+    async def requeue_research_job(
+        self, job_id: str, error: str, lease_seconds: int, delay_seconds: float = 0
+    ) -> bool:
+        async with self._lock:
+            j = self._jobs.get(job_id)
+            if not j or j.status != ResearchStatusEnum.RUNNING:
+                return False
+            now = datetime.now(timezone.utc)
+            self._jobs[job_id] = j.model_copy(
+                update={
+                    "status": ResearchStatusEnum.QUEUED,
+                    "lastError": error,
+                    "leaseExpiresAt": (now + timedelta(seconds=lease_seconds)).isoformat(),
+                    "notBefore": (now + timedelta(seconds=delay_seconds)).isoformat() if delay_seconds > 0 else None,
+                }
+            )
+            return True
 
     async def finish_research_job(
         self, job_id: str, status: ResearchStatusEnum, error: str | None = None

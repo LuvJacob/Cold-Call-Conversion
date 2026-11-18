@@ -212,3 +212,5 @@ Whether we build these depends on Joseph's seller interviews.
 6. Search API is decided (Tavily). Which LLM do we use: Gemini or IBM watsonx.ai? And what budget do we have if we outgrow the free tiers (Tavily, People Data Labs), or want Apollo? (James, Jacob)
 7. How long should a cached briefing stay valid before it's refreshed? (Srikar, James)
 8. Should the seller's offering be entered once per calling list or per prospect? (Joseph, Aanand)
+
+**Resolved (questions 4 and 7):** failed jobs are retried automatically, 3 attempts with jittered exponential backoff, and a cached briefing stays valid for 7 days (`BRIEF_CACHE_DAYS`). Both are configurable defaults; see [backend-plan.md](backend-plan.md) section 4.

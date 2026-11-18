@@ -1,0 +1,32 @@
+{
+  "id": "nothing_found",
+  "description": "No profile and no search hits at all: no facts, no invented summary.",
+  "tags": [
+    "empty"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-empty",
+    "name": "Zed Quill",
+    "company": "Nonexistent Sample Startup",
+    "role": "Founder",
+    "company_domain": null,
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": null,
+    "company": null
+  },
+  "search_results": [],
+  "expect": {
+    "identity_match": [
+      "unsure"
+    ],
+    "min_facts": 0,
+    "max_facts": 0,
+    "must_flag_uncertainty": true,
+    "no_person_facts": true
+  }
+}

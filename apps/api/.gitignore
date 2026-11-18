@@ -1,0 +1,4 @@
+.env
+# The repo-wide .env.* rule would hide the template; it holds only empty placeholders.
+!.env.example
+.venv/

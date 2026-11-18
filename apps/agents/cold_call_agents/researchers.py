@@ -1,7 +1,8 @@
 """Person and company researchers.
 
-v0 extraction is deterministic: facts come from profile records and from the
-pre-extracted `claims` on search results. No LLM is used here yet.
+Facts come from profile records, from pre-extracted `claims` on search results
+(fixtures) and, for results without claims, from guarded LLM extraction
+(`extraction.py`) when a real LLM is available.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Optional
 
+from .extraction import Extractor, Subject, combine_excerpts
 from .guardrails import sanitize_web_text
 from .models import Fact, IdentityMatch, Prospect, Source, clean_url
 from .providers import LLMClient, ProfileClient, SearchClient, SearchResult
@@ -24,6 +26,10 @@ class Budget:
     max_searches: int = 6
     timeout_seconds: float = 60
     max_profile_lookups: int = 2
+    # LLM claim-extraction calls (retries count). Per researcher: the person and
+    # company researchers each get a copy, so the effective cap is 2x per briefing
+    # until the orchestrator splits it.
+    max_extraction_calls: int = 6
 
 
 def normalize_company(name: str) -> str:
@@ -56,9 +62,8 @@ def _mentions(result: SearchResult, prospect: Prospect) -> bool:
 def extract_claims(result: SearchResult, llm: Optional[LLMClient]) -> list[dict[str, str]]:
     """Return structured claims for a search result.
 
-    v0: fixtures ship pre-extracted claims. TODO: when a result has none, ask
-    `llm` to extract claims from the sanitized content (inside a <data> block)
-    so real Tavily results plug in without changing call sites.
+    Only returns pre-extracted claims (fixtures). Results without claims go
+    through `Extractor` in `_Collector.claims`.
     """
     return result.claims or []
 
@@ -77,14 +82,18 @@ def _slug(key: str) -> str:
 class _Collector:
     """Builds sources (deduplicated) and facts with unique ids."""
 
-    def __init__(self, prefix: str, llm: Optional[LLMClient]) -> None:
+    def __init__(self, prefix: str, llm: Optional[LLMClient], max_extraction_calls: int = 6) -> None:
         self.prefix = prefix
         self.llm = llm
+        self.extractor = Extractor(llm, max_extraction_calls)
         self.sources: list[Source] = []
         self.facts: list[Fact] = []
         self._by_key: dict[Any, str] = {}
 
-    def source(self, title: str, publisher: str, content: str, url: Optional[str], day: Optional[str]) -> str:
+    def source(
+        self, title: str, publisher: str, content: str, url: Optional[str], day: Optional[str],
+        excerpt: Optional[str] = None,
+    ) -> str:
         url = clean_url(url)
         title = sanitize_web_text(title or "", 200, redact=True) or "Untitled source"
         publisher = sanitize_web_text(publisher or "", 120, redact=True) or "Unknown publisher"
@@ -97,7 +106,7 @@ class _Collector:
                     id=sid,
                     title=title,
                     publisher=publisher,
-                    excerpt=sanitize_web_text(content or "", 300, redact=True),
+                    excerpt=sanitize_web_text(excerpt or content or "", 600 if excerpt else 300, redact=True),
                     url=url,
                     date=_clean_date(day),
                 )
@@ -129,13 +138,19 @@ class _Collector:
             content, s.get("url"), s.get("date"),
         )
 
-    def claims(self, results: list[SearchResult], subject: str) -> None:
+    def claims(self, results: list[SearchResult], subject: str, who: Optional[Subject] = None) -> None:
         for r in results:
             sid = None
-            for c in extract_claims(r, self.llm):
+            found = extract_claims(r, self.llm)
+            excerpt = None
+            if not found and who is not None:
+                found = self.extractor.extract(r, who)
+                excerpt = combine_excerpts(found) if found else None
+            for c in found:
                 if c.get("subject") != subject or not all(c.get(k) for k in ("key", "label", "text")):
                     continue
-                sid = sid or self.source(r.title, r.publisher, r.content, r.url, r.published_date)
+                # LLM-extracted claims: the cited excerpt covers every claim's sentence.
+                sid = sid or self.source(r.title, r.publisher, r.content, r.url, r.published_date, excerpt)
                 self.fact(subject, c["key"], c["label"], c["text"], c.get("value", ""), sid)
 
 
@@ -148,6 +163,18 @@ def _safe_call(missing: list[str], what: str, fn, *args):
         return None
 
 
+def _provider_notes(subject: str, *providers) -> list[str]:
+    """Optional hook: providers that explain gaps (ambiguous match, failed source)
+    expose `notes(subject)`. The sample mocks do not, so they add nothing."""
+    out: list[str] = []
+    seen: list = []
+    for p in providers:
+        if hasattr(p, "notes") and not any(p is q for q in seen):
+            seen.append(p)
+            out.extend(n for n in p.notes(subject) if n not in out)
+    return out
+
+
 def research_person(
     prospect: Prospect,
     search: SearchClient,
@@ -156,7 +183,7 @@ def research_person(
     llm: Optional[LLMClient] = None,
 ) -> tuple[IdentityMatch, list[Fact], list[Source], list[str]]:
     """Check identity first; collect person facts only if the match is not 'unsure'."""
-    col = _Collector("p", llm)
+    col = _Collector("p", llm, budget.max_extraction_calls)
     missing: list[str] = []
 
     profile = None
@@ -185,6 +212,7 @@ def research_person(
     elif mentions:
         identity = "likely"
     else:
+        missing.extend(n for n in _provider_notes("person", search, profiles) if n not in missing)
         return "unsure", [], [], missing
 
     if identity == "confirmed":
@@ -196,10 +224,12 @@ def research_person(
         start = sanitize_web_text(str(profile.get("start_date") or ""), 60)
         if start:
             col.fact("person", "tenure", "In role since", f"In current role since {start}.", start, sid)
-    col.claims(mentions, "person")
+    col.claims(mentions, "person", Subject("person", prospect.name, prospect.company))
 
     if not any(f.key == "current_role" for f in col.facts):
         missing.append("Current role could not be found.")
+    missing.extend(n for n in col.extractor.notes() if n not in missing)
+    missing.extend(n for n in _provider_notes("person", search, profiles) if n not in missing)
     return identity, col.facts, col.sources, missing
 
 
@@ -211,7 +241,7 @@ def research_company(
     llm: Optional[LLMClient] = None,
 ) -> tuple[list[Fact], list[Source], list[str]]:
     """Collect company facts and recent news."""
-    col = _Collector("c", llm)
+    col = _Collector("c", llm, budget.max_extraction_calls)
     missing: list[str] = []
 
     profile = None
@@ -233,10 +263,12 @@ def research_company(
             missing.append(f"Company {topic} search skipped (search budget reached).")
             continue
         found = _safe_call(missing, f"Company {topic} search", search.search, f"{prospect.company} {topic}", MAX_RESULTS)
-        col.claims(found or [], "company")
+        col.claims(found or [], "company", Subject("company", prospect.company))
 
     if not any(f.key == "employee_count" for f in col.facts):
         missing.append("Company size could not be found.")
     if not any(f.key.startswith("recent_news") for f in col.facts):
         missing.append("No recent company news found.")
+    missing.extend(n for n in col.extractor.notes() if n not in missing)
+    missing.extend(n for n in _provider_notes("company", search, profiles) if n not in missing)
     return col.facts, col.sources, missing

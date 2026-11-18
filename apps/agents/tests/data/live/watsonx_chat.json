@@ -1,0 +1,7 @@
+{
+  "_comment": "FICTIONAL SAMPLE in the shape of a watsonx.ai /ml/v1/text/chat response.",
+  "id": "sample-chat-1",
+  "model_id": "ibm/granite-3-3-8b-instruct",
+  "choices": [{"index": 0, "message": {"role": "assistant", "content": "Jordan Sample leads operations at Acme Robotics Sample Inc."}, "finish_reason": "stop"}],
+  "usage": {"prompt_tokens": 120, "completion_tokens": 17, "total_tokens": 137}
+}

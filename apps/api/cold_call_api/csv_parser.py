@@ -37,6 +37,8 @@ def _field_message(err: Exception) -> str:
         kind = d.get("type", "")
         if kind == "string_too_short":
             parts.append(f"{field} is required")
+        elif kind == "value_error" and field == "companyDomain":
+            parts.append("website is not a valid domain")
         elif kind == "string_too_long":
             parts.append(f"{field} is too long (max {d.get('ctx', {}).get('max_length', '?')} characters)")
         else:
@@ -145,6 +147,12 @@ def parse_prospect_csv(text: str) -> CsvParseResult:
         "notes": "notes",
         "note": "notes",
         "comments": "notes",
+        "companydomain": "companyDomain",
+        "domain": "companyDomain",
+        "website": "companyDomain",
+        "companywebsite": "companyDomain",
+        "url": "companyDomain",
+        "websiteurl": "companyDomain",
     }
 
     raw_headers = populated[0][1]
@@ -156,7 +164,7 @@ def parse_prospect_csv(text: str) -> CsvParseResult:
     if not all(k in headers for k in ("name", "company", "role")):
         return CsvParseResult(
             rows=[],
-            errors=["Required columns: name, company, role (or title). Optional: phone, notes."],
+            errors=["Required columns: name, company, role (or title). Optional: phone, notes, website."],
             total=0,
         )
 
@@ -164,7 +172,7 @@ def parse_prospect_csv(text: str) -> CsvParseResult:
     if len(set(recognized)) != len(recognized):
         return CsvParseResult(
             rows=[],
-            errors=["Two columns map to the same field. Keep one name, company, role, phone, and notes column."],
+            errors=["Two columns map to the same field. Keep one name, company, role, phone, notes, and website column."],
             total=0,
         )
 

@@ -1,0 +1,24 @@
+{
+  "_comment": "FICTIONAL SAMPLE in the shape of a People Data Labs person enrich response. Includes private fields on purpose, to prove they are dropped.",
+  "status": 200,
+  "likelihood": 8,
+  "data": {
+    "full_name": "Jordan Sample",
+    "job_title": "Vp Of Operations",
+    "job_title_levels": ["vp"],
+    "job_company_name": "Acme Robotics Sample Inc",
+    "job_start_date": "2021-03",
+    "experience": [
+      {"company": {"name": "Acme Robotics Sample Inc"}, "title": {"name": "Vp Of Operations"}, "is_primary": true, "end_date": null},
+      {"company": {"name": "Globex Fictional Ltd"}, "title": {"name": "Director"}, "is_primary": false, "end_date": "2021-02"},
+      {"company": {"name": "Initech Sample"}, "title": {"name": "Manager"}, "is_primary": false, "end_date": "2017-06"}
+    ],
+    "personal_emails": ["jordan.private@example.com"],
+    "mobile_phone": "+14155550199",
+    "phone_numbers": ["+14155550199"],
+    "street_address": "12 Private Lane",
+    "birth_year": 1980,
+    "birth_date": "1980-02-03",
+    "work_email": "jordan@acme-robotics.example"
+  }
+}

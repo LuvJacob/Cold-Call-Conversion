@@ -6,9 +6,10 @@ import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from cold_call_api.config import settings
+from cold_call_api.config import research_mode, settings
 from cold_call_api.routes import calls, health, lists, prospects, research
 
 # Structured logging setup
@@ -35,6 +36,7 @@ def check_auth_safety() -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     check_auth_safety()
     logger.info("Starting %s v%s in %s mode", settings.app_name, settings.app_version, settings.environment)
+    logger.info("Research providers mode: %s", research_mode() or "default (sample fixtures only)")
     yield
     logger.info("Shutting down %s", settings.app_name)
 
@@ -64,6 +66,15 @@ app.include_router(lists.router)
 app.include_router(prospects.router)
 app.include_router(research.router)
 app.include_router(calls.router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """Same 422 shape as FastAPI's default, but never echo the rejected input (it may be sensitive)."""
+    errors = [
+        {"type": e.get("type"), "loc": list(e.get("loc", ())), "msg": e.get("msg")} for e in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 
 @app.exception_handler(Exception)

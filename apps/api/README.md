@@ -75,6 +75,28 @@ export MONGO_URL="mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@127.0.
 uv run --extra dev --extra mongodb pytest tests/test_mongo_storage.py -v
 ```
 
+## Prospect company domain
+
+`companyDomain` is optional on create, `PATCH`, and CSV import (header aliases: `website`, `domain`, `company website`, `company domain`, `url`). It is normalized to a bare lowercase hostname (scheme, path, port and a leading `www.` removed). IP addresses, credentials, invisible characters, reserved suffixes (`.local`, `.internal`, `.test`, `.localhost` and similar), non-http(s) schemes and invalid hostnames return `422` (CSV rows are rejected individually). On `PATCH`, omit it to keep the value or send `""` to clear it. Changing it bumps the prospect revision, clears the brief, and changes the brief cache key.
+
+## Research retries and brief cache
+
+A research attempt that fails with an exception is retried automatically with jittered exponential backoff. After the last attempt the prospect stays `failed` with a generic error. Stale prospects (edited meanwhile) and deterministic errors (validation or programming errors) are never retried. Validation `422` responses do not echo the rejected input. Cached briefs older than the cache window are ignored on read.
+
+- `RESEARCH_MAX_ATTEMPTS`: total attempts per job (default `3`).
+- `RESEARCH_RETRY_BASE_SECONDS`: backoff base (default `5`; delays about 5 s, 10 s, 20 s, +/-25%).
+- `BRIEF_CACHE_DAYS`: how long a cached brief stays valid (default `7`).
+- `RESEARCH_LEASE_SECONDS` (default `90`) and `RESEARCH_TIMEOUT_SECONDS` (default `60`) as before.
+
+## OpenAPI export
+
+Regenerate `docs/api/openapi.json` from the app after changing routes or models:
+
+```bash
+cd apps/api
+.venv/bin/python scripts/export_openapi.py   # optional argument: output path
+```
+
 ## Local Development & Testing
 
 ```bash
@@ -89,6 +111,25 @@ cd apps/api
 python3 -m venv .venv && .venv/bin/pip install -e ../agents -e '.[dev]'
 .venv/bin/pytest -q
 ```
+
+### Research providers
+
+`RESEARCH_PROVIDERS` (read from the worker's environment; the active mode is logged at startup) selects how prospects without a sample fixture are researched. Sample fixtures for the fictional sample prospects always win in every mode.
+
+- unset (default): no network; non-sample prospects get an empty, partial brief.
+- `free`: free public sources (Wikidata/Wikipedia, SEC EDGAR, company homepage), no API keys, no LLM. Optional: `SEC_USER_AGENT` (required by SEC, otherwise EDGAR is skipped), `RESEARCH_CONTACT`.
+- `live`: paid providers via `cold_call_agents.live.build_live_providers`. Env vars: `TAVILY_API_KEY` (web search), `PDL_API_KEY` and `PDL_MIN_LIKELIHOOD` (people data), `LLM_PROVIDER` (`watsonx` default, or `gemini`), `WATSONX_API_KEY` + `WATSONX_URL` + `WATSONX_PROJECT_ID` (optional `WATSONX_MODEL_ID`, `WATSONX_API_VERSION`), or `GEMINI_API_KEY` (optional `GEMINI_MODEL`). Template: [`.env.example`](.env.example) (empty values; real keys only in the environment or an untracked `.env`).
+- Any other value is treated as unset, with a one-time warning.
+
+Fallbacks in `live`: a missing Tavily key uses free sources for search, a missing PDL key uses free sources for profiles, and a missing LLM setting uses template text. Each fallback is noted in the brief's uncertainty list, so partial key setups work.
+
+Caching: in `free` and `live` only complete (`ready`) briefs are cached, never partial ones, and the mode is part of the cache key, so a brief from one mode is never served after switching to another.
+
+Cost warning: `live` mode spends paid credits (Tavily, People Data Labs, watsonx.ai or Gemini) on every uncached research. A failed attempt is retried up to `RESEARCH_MAX_ATTEMPTS` times and each retry can repeat the paid calls, so lower it (for example to `1`) while testing.
+
+`GET /healthz/research` (requires the same authentication as the research routes) reports the mode and which providers are configured as booleans only, never key values, for example `{"mode":"live","tavily":true,"pdl":false,"llm":"watsonx","watsonx":false,"gemini":false}` (`watsonx` is true only when the key, an https URL and the project id are all set). With the variable unset, `mode` is `"default"`.
+
+Prospects may carry an optional `companyDomain` (see below). When set it is passed to the agents; otherwise the homepage fetched is the website Wikidata lists for the matched company. Details and limits: [apps/agents/README.md](../agents/README.md).
 
 To run the local API server:
 

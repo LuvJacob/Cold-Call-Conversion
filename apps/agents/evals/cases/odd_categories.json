@@ -1,0 +1,80 @@
+{
+  "id": "odd_categories",
+  "description": "Company described with odd category labels (holding, keiretsu) and a long size string.",
+  "tags": [
+    "odd-categories"
+  ],
+  "sample": true,
+  "today": "2026-10-22",
+  "prospect": {
+    "prospect_id": "eval-odd",
+    "name": "Haruto Sato",
+    "company": "Nippon Sample Holdings Kabushiki Kaisha",
+    "role": "Senior Manager",
+    "company_domain": "nippon-sample-holdings.example",
+    "notes": "SAMPLE: fictional eval prospect.",
+    "seller_offering": null
+  },
+  "profiles": {
+    "person": {
+      "sample": true,
+      "name": "Haruto Sato",
+      "company": "Nippon Sample Holdings Kabushiki Kaisha",
+      "title": "Senior Manager",
+      "start_date": "April 2018",
+      "source": {
+        "title": "Haruto Sato profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/haruto-sato",
+        "date": "2026-09-01"
+      }
+    },
+    "company": {
+      "sample": true,
+      "name": "Nippon Sample Holdings Kabushiki Kaisha",
+      "domain": "nippon-sample-holdings.example",
+      "industry": "holding company; conglomerate; keiretsu member",
+      "source": {
+        "title": "Nippon Sample Holdings Kabushiki Kaisha company profile (sample)",
+        "publisher": "Sample Profile Data",
+        "url": "https://profiles-sample.example/nippon-holdings",
+        "date": "2026-09-01"
+      },
+      "employee_count": "1.2 million (consolidated, includes subsidiaries)"
+    }
+  },
+  "search_results": [
+    {
+      "sample": true,
+      "keywords": [
+        "about"
+      ],
+      "title": "Group overview (sample)",
+      "url": "https://nippon-sample-holdings.example/about",
+      "publisher": "Nippon Sample Holdings (sample)",
+      "published_date": "2026-09-01",
+      "content": "Nippon Sample Holdings Kabushiki Kaisha is headquartered in Chiyoda, Tokyo.",
+      "claims": [
+        {
+          "subject": "company",
+          "key": "headquarters",
+          "label": "Headquarters",
+          "text": "Headquartered in Chiyoda, Tokyo.",
+          "value": "Chiyoda, Tokyo"
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "identity_match": [
+      "confirmed",
+      "likely"
+    ],
+    "min_facts": 3,
+    "max_facts": 10,
+    "must_flag_uncertainty": false,
+    "must_not_contain": [
+      "Q4830453"
+    ]
+  }
+}
