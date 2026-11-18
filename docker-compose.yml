@@ -51,6 +51,18 @@ services:
       RESEARCH_PROVIDERS: ${RESEARCH_PROVIDERS-free}  # "-" not ":-": an explicit empty value means offline samples
       SEC_USER_AGENT: ${SEC_USER_AGENT:-}
       RESEARCH_CONTACT: ${RESEARCH_CONTACT:-}
+      # Live mode (RESEARCH_PROVIDERS=live): paid provider keys from .env. Empty means that provider falls back to free sources.
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      PDL_API_KEY: ${PDL_API_KEY:-}
+      PDL_MIN_LIKELIHOOD: ${PDL_MIN_LIKELIHOOD:-}
+      WATSONX_API_KEY: ${WATSONX_API_KEY:-}
+      WATSONX_URL: ${WATSONX_URL:-}
+      WATSONX_PROJECT_ID: ${WATSONX_PROJECT_ID:-}
+      WATSONX_MODEL_ID: ${WATSONX_MODEL_ID:-}
+      WATSONX_API_VERSION: ${WATSONX_API_VERSION:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
     ports:
       - "127.0.0.1:8000:8000"
     networks:

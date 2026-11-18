@@ -139,7 +139,7 @@ Stop with `docker compose down`; add `-v` to also delete the database volume.
 - This is **local development only**: `AUTH_MODE=dev` trusts the `X-Seller-ID` header and Mongo traffic is not TLS-encrypted. For anything deployed use `AUTH_MODE=jwt`, `ENVIRONMENT=production` and a TLS Mongo connection (see [apps/api/README.md](apps/api/README.md)).
 - **Research modes** (`RESEARCH_PROVIDERS` in `.env`, default `free`):
   - `free`: real public lookups (Wikidata, SEC EDGAR, company website) for prospects that are not the built-in samples. This makes real network calls from the API container but needs no API keys. Set `SEC_USER_AGENT` (descriptive text with a contact, as SEC requires; unset skips EDGAR) and optionally `RESEARCH_CONTACT` to your own details.
-  - `live`: paid providers (LLM, search, profiles). Keys go in `.env` (never committed); missing keys fall back to free sources. See [apps/agents/README.md](apps/agents/README.md) for the key names. Compose currently passes only the three research variables above to the API, so live keys also need adding to the `api` environment.
+  - `live`: paid providers (LLM, search, profiles). Keys go in `.env` (never committed); missing keys fall back to free sources. See [apps/agents/README.md](apps/agents/README.md) for the key names. Compose passes these keys to the `api` service.
   - empty (`RESEARCH_PROVIDERS=` set to nothing in `.env`): offline sample fixtures only, no network calls.
 - `.env` is git-ignored. Never commit it, and never put real keys in `.env.example`.
 
