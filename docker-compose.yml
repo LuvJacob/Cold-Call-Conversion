@@ -86,6 +86,11 @@ services:
         condition: service_healthy
     environment:
       BIND_HOST: 172.29.77.11
+      # Read at request time by the server (no rebuild needed). "demo" = offline sample data.
+      DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-api}
+      # Server-side proxy target (apps/web/src/app/api/[...path]/route.ts); never exposed to the browser.
+      API_BASE_URL: http://172.29.77.10:8000
+      DEMO_SELLER_ID: ${DEMO_SELLER_ID:-demo-seller}
     ports:
       - "127.0.0.1:3000:3000"
     networks:

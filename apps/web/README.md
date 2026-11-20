@@ -52,3 +52,16 @@ The project now targets an **IBM Cloud enterprise model** and a **NoSQL database
 ## Briefing pop-out
 
 `Pop out briefing` (`src/components/briefing-popout.tsx`) opens the current briefing in a small always-on-top window via Chrome's Document Picture-in-Picture API, so it can sit over a dialer or CRM. It renders through a React portal, so it updates live when research finishes, and it closes when you switch prospects. Safari and Firefox lack the API; the button is disabled there ("Pop-out needs Chrome or Edge").
+
+## API mode
+
+By default the app runs on offline sample data. To use the FastAPI backend:
+
+```
+# terminal 1 (apps/api, dev auth, offline sample research)
+AUTH_MODE=dev ENVIRONMENT=development STORAGE_BACKEND=memory PYTHONPATH=../agents:. python -m uvicorn cold_call_api.main:app --port 8000
+# terminal 2 (apps/web)
+NEXT_PUBLIC_DATA_MODE=api API_BASE_URL=http://127.0.0.1:8000 npm run dev -- --port 3100
+```
+
+With Docker, `docker compose up --build` starts the web service in API mode (`NEXT_PUBLIC_DATA_MODE` defaults to `api` in compose; set it to `demo` for samples). The browser only calls `/api/*`, a server-side proxy that adds the dev `X-Seller-ID` header. See `.env.example` and `docs/frontend-integration.md`.
