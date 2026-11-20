@@ -66,3 +66,14 @@ async def test_unknown_prospect_gets_no_invented_facts(client: AsyncClient) -> N
     assert brief["sources"] == []
     assert any("No live research providers" in u for u in brief["uncertainty"])
     assert "regional and national" not in str(brief)
+
+
+def test_mongodb_backend_without_uri_fails_loudly(monkeypatch: pytest.MonkeyPatch) -> None:
+    from cold_call_api import storage
+    from cold_call_api.config import settings
+
+    monkeypatch.setattr(settings, "storage_backend", "mongodb")
+    monkeypatch.setattr(settings, "mongodb_uri", "")
+    monkeypatch.setattr(storage, "_repo_instance", None)
+    with pytest.raises(RuntimeError, match="MONGODB_URI"):
+        storage.get_repository()

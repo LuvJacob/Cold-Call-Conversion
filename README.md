@@ -116,6 +116,29 @@ GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on ev
 
 PRs should be green before merging. Superseded runs on the same branch are cancelled automatically.
 
+## Run locally with Docker
+
+One command starts MongoDB, the API (on the Mongo storage) and the web app. You need Docker with Compose v2 (Docker Desktop, or `brew install docker docker-compose colima && colima start`).
+
+```sh
+cp .env.example .env        # then set MONGO_ROOT_PASSWORD to a long random value
+docker compose up --build
+```
+
+| Service | URL | Notes |
+|---|---|---|
+| Web | http://127.0.0.1:3000 | Next.js app |
+| API | http://127.0.0.1:8000 (docs at `/docs`) | `ENVIRONMENT=development`, `AUTH_MODE=dev`, `STORAGE_BACKEND=mongodb` |
+| MongoDB | `127.0.0.1:27017` | Root user from `.env`; data kept in the `mongo-data` volume |
+
+Stop with `docker compose down`; add `-v` to also delete the database volume.
+
+- Host ports are published on `127.0.0.1` only, and each container binds to a fixed address on a private network, never `0.0.0.0`.
+- Containers run as non-root with a read-only root filesystem and all capabilities dropped. Base images are Red Hat UBI (`registry.access.redhat.com`) and the official MongoDB UBI image.
+- The web app is still the browser-local sample-data demo; it does not call the API yet.
+- This is **local development only**: `AUTH_MODE=dev` trusts the `X-Seller-ID` header and Mongo traffic is not TLS-encrypted. For anything deployed use `AUTH_MODE=jwt`, `ENVIRONMENT=production` and a TLS Mongo connection (see [apps/api/README.md](apps/api/README.md)).
+- `.env` is git-ignored. Never commit it, and never put real keys in `.env.example`.
+
 ## Local development
 
 Use Node.js 22.13 or newer.

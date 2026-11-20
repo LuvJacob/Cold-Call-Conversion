@@ -76,7 +76,13 @@ class MongoStorageRepository(StorageRepository):
             name="one_active_job_per_revision",
         )
         self._active_calls.create_index([("sellerId", 1)], unique=True)
-        self._completed_calls.create_index([("sellerId", 1), ("idempotencyKey", 1)])
+        # Retried "end call" requests with the same Idempotency-Key must resolve to one call.
+        self._completed_calls.create_index(
+            [("sellerId", 1), ("idempotencyKey", 1)],
+            unique=True,
+            partialFilterExpression={"idempotencyKey": {"$type": "string"}},
+            name="one_call_per_idempotency_key",
+        )
         self._completed_calls.create_index([("sellerId", 1), ("endedAt", 1)])
 
     async def ensure_default_list(self, seller_id: str) -> ListModel:
@@ -456,16 +462,26 @@ class MongoStorageRepository(StorageRepository):
     async def end_call(
         self, seller_id: str, outcome: CallOutcomeEnum, idempotency_key: str | None = None
     ) -> CompletedCallModel | None:
-        active = await self.get_active_call(seller_id)
-        if not active:
-            if idempotency_key:
-                doc = await self._run(
-                    self._completed_calls.find_one,
-                    {"sellerId": seller_id, "idempotencyKey": idempotency_key},
-                    {"_id": 0},
-                )
-                return CompletedCallModel.model_validate(doc) if doc else None
-            return None
+        from pymongo.errors import DuplicateKeyError  # type: ignore[import-untyped]
+
+        async def replay() -> CompletedCallModel | None:
+            if not idempotency_key:
+                return None
+            doc = await self._run(
+                self._completed_calls.find_one,
+                {"sellerId": seller_id, "idempotencyKey": idempotency_key},
+                {"_id": 0},
+            )
+            return CompletedCallModel.model_validate(doc) if doc else None
+
+        # Atomically claim the active call: of N concurrent "end" requests exactly one
+        # gets the document back; the rest see no active call.
+        claimed = await self._run(
+            self._active_calls.find_one_and_delete, {"sellerId": seller_id}, projection={"_id": 0, "sellerId": 0}
+        )
+        if not claimed:
+            return await replay()
+        active = ActiveCallModel.model_validate(claimed)
 
         completed = CompletedCallModel(
             id=f"call-{uuid.uuid4().hex[:8]}",
@@ -476,8 +492,15 @@ class MongoStorageRepository(StorageRepository):
             outcome=outcome,
             idempotencyKey=idempotency_key,
         )
-        await self._run(self._completed_calls.insert_one, completed.model_dump())
-        await self._run(self._active_calls.delete_one, {"sellerId": seller_id})
+        try:
+            await self._run(self._completed_calls.insert_one, completed.model_dump())
+        except DuplicateKeyError:
+            # This key already ended an earlier call: restore the claimed call and replay the original.
+            try:
+                await self._run(self._active_calls.insert_one, {"sellerId": seller_id, **active.model_dump()})
+            except DuplicateKeyError:
+                pass  # the seller already connected a new call meanwhile; keep that one
+            return await replay()
         await self._run(
             self._prospects.update_one,
             {"sellerId": seller_id, "id": active.prospectId},

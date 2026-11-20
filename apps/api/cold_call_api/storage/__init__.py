@@ -11,8 +11,10 @@ def get_repository() -> StorageRepository:
     """Return the singleton repository instance."""
     global _repo_instance
     if _repo_instance is None:
-        if settings.storage_backend == "mongodb" and settings.mongodb_uri:
-            # Fallback to MongoDB repository when configured
+        if settings.storage_backend == "mongodb":
+            if not settings.mongodb_uri:
+                # Never fall back to the in-memory store silently: data would vanish on restart.
+                raise RuntimeError("STORAGE_BACKEND=mongodb requires MONGODB_URI to be set.")
             from cold_call_api.storage.mongodb import MongoStorageRepository
             _repo_instance = MongoStorageRepository(
                 uri=settings.mongodb_uri,
