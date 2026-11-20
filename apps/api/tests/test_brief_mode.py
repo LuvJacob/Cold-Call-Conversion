@@ -2,11 +2,13 @@
 from cold_call_agents.adapter import to_frontend_brief
 from cold_call_agents.orchestrator import run_research
 from cold_call_agents.models import Prospect
+from cold_call_agents.providers import MockLLM, MockProfiles, MockSearch
 from cold_call_api.models import BriefModel
 
 
 def _briefing():
-    return run_research(Prospect(prospect_id="p1", name="Test Person", company="Test Co", role="CEO"))
+    return run_research(Prospect(prospect_id="p1", name="Test Person", company="Test Co", role="CEO"),
+        llm=MockLLM(), search=MockSearch([]), profiles=MockProfiles(None, None))
 
 
 def test_default_mode_is_demo():
