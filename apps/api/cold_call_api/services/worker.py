@@ -278,7 +278,8 @@ async def _run_job(repo: StorageRepository, job: ResearchJobModel) -> None:
         _close_providers(search, profiles, llm)  # free and live providers own HTTP clients
 
     # Adapt to frontend brief schema
-    brief_dict = to_frontend_brief(briefing)
+    # Fixture (sample) briefs stay "demo"; real research is labelled "free" or "live".
+    brief_dict = to_frontend_brief(briefing, mode=researched_mode or "demo")
     if not briefing.facts:
         brief_dict["uncertainty"].insert(
             0,
