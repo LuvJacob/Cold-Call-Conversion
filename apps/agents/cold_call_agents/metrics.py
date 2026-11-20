@@ -3,8 +3,8 @@
 `run_research_with_metrics` (orchestrator.py) fills a `RunMetrics`: wall time per
 stage, number of search/profile/HTTP requests, LLM tokens and an estimated cost.
 Template and mock LLMs have no usage counter, so they report 0 tokens (mocks still
-report calls via `.calls`). Limits: `http_requests` covers the free-source HttpClients
-only (the live clients expose no counter); request, token and HTTP counts are per-run
+report calls via `.calls`). `http_requests` counts every HTTP attempt of the free-source
+and live (tavily, pdl, watsonx incl. IAM, gemini) clients, retries included. Limits: request, token and HTTP counts are per-run
 deltas, so sharing one client across concurrent runs mixes their counts; the stage time
 of a researcher that timed out and was abandoned may be missing.
 
@@ -168,7 +168,9 @@ class CountingProxy:
 
 
 def http_request_count(*providers: Any) -> int:
-    """Best effort: sums `requests_made` from distinct HttpClients (free sources expose `.http`)."""
+    """Best effort: sums `requests_made` from distinct HttpClients (free sources and the live
+    tavily/pdl/watsonx/gemini clients expose `.http`; every attempt, retries and the IAM fetch
+    included, is counted once in HttpClient._spend). Only counts are read, never URLs or headers."""
     seen: list[Any] = []
     for p in providers:
         inner = getattr(p, "_inner", p)

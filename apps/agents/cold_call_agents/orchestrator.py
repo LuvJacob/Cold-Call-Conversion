@@ -53,7 +53,7 @@ def run_research_with_metrics(
     rec = StageRecorder()
     s_proxy = CountingProxy(search, ("search",))
     p_proxy = CountingProxy(profiles, ("person", "company"))
-    before, http_before = llm_snapshot(llm), http_request_count(search, profiles)
+    before, http_before = llm_snapshot(llm), http_request_count(search, profiles, llm)
     t0 = perf_counter()
     briefing = _run(prospect, llm, s_proxy, p_proxy, budget, today, mode, rec)
     after = llm_snapshot(llm)
@@ -63,7 +63,7 @@ def run_research_with_metrics(
         total_seconds=perf_counter() - t0,
         search_requests=s_proxy.count,
         profile_requests=p_proxy.count,
-        http_requests=http_request_count(search, profiles) - http_before,
+        http_requests=http_request_count(search, profiles, llm) - http_before,
         llm_calls=after[0] - before[0],
         input_tokens=after[1] - before[1],
         output_tokens=after[2] - before[2],
