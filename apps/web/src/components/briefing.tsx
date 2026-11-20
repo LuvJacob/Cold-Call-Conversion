@@ -20,6 +20,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Brief, Outcome, Prospect } from "@/lib/model";
+import { BriefingPopout } from "./briefing-popout";
 import { Avatar, Button, EmptyState, IconButton, ResearchBadge } from "./ui";
 
 export function BriefOverview({
@@ -344,6 +345,7 @@ export function BriefingPanel({
             </IconButton>
           )}
           <ResearchBadge status={prospect.researchStatus} />
+          <BriefingPopout prospect={prospect} />
           <IconButton label={`Edit ${prospect.name}`} onClick={onEdit}>
             <Pencil size={15} />
           </IconButton>

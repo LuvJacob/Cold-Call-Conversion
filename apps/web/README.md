@@ -48,3 +48,7 @@ The project now targets an **IBM Cloud enterprise model** and a **NoSQL database
 ## Limits
 
 1,000 prospects and 50 lists per local demo workspace; imports are limited to 500 rows and 1 MB. Persistence is browser-local and intended for one active tab. No external services or paid resources are required to run the demo.
+
+## Briefing pop-out
+
+`Pop out briefing` (`src/components/briefing-popout.tsx`) opens the current briefing in a small always-on-top window via Chrome's Document Picture-in-Picture API, so it can sit over a dialer or CRM. It renders through a React portal, so it updates live when research finishes, and it closes when you switch prospects. Safari and Firefox lack the API; the button is disabled there ("Pop-out needs Chrome or Edge").
