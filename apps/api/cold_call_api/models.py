@@ -123,7 +123,7 @@ class QuestionModel(BaseModel):
 class BriefModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    mode: Literal["demo"] = "demo"
+    mode: Literal["demo", "free", "live"] = "demo"
     preparedAt: str
     summary: str
     facts: list[FactModel] = Field(default_factory=list)

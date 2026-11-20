@@ -48,12 +48,11 @@ def _summary(b: Briefing) -> str:
     return NO_FACTS_SUMMARY.format(name=p.name, company=p.company)
 
 
-def to_frontend_brief(b: Briefing) -> dict[str, Any]:
+def to_frontend_brief(b: Briefing, mode: str = "demo") -> dict[str, Any]:
+    """`mode`: "demo" for sample fixtures, "free" or "live" for real research (shown as such in the UI)."""
     labels = {f.id: f.label for f in b.facts}
     return {
-        # Frontend only accepts the literal "demo" today. Live mode needs a
-        # frontend schema change agreed with Aanand.
-        "mode": "demo",
+        "mode": mode if mode in ("demo", "free", "live") else "demo",
         "preparedAt": b.generated_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "summary": _summary(b),
         "facts": [{"label": f.label, "text": _fact_text(f), "sourceIds": list(f.source_ids)} for f in b.facts],
