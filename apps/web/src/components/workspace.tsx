@@ -256,10 +256,10 @@ export default function Workspace({
       <div className="workspace-switch">
         <span className="workspace-avatar">D</span>
         <div>
-          <strong>Demo workspace</strong>
-          <small>Local to this browser</small>
+          <strong>{dataMode === "api" ? "Team workspace" : "Demo workspace"}</strong>
+          <small>{dataMode === "api" ? "Saved to server" : "Local to this browser"}</small>
         </div>
-        <span className="tiny-label">DEMO</span>
+        <span className="tiny-label">{dataMode === "api" ? "LIVE" : "DEMO"}</span>
       </div>
       <nav aria-label="Main navigation" className="main-nav">
         <button
@@ -352,8 +352,8 @@ export default function Workspace({
         <div className="sidebar-user">
           <span className="user-avatar">D</span>
           <div>
-            <strong>Demo seller</strong>
-            <small>No sign-in required</small>
+            <strong>{dataMode === "api" ? "Seller" : "Demo seller"}</strong>
+            <small>{dataMode === "api" ? "Dev sign-in" : "No sign-in required"}</small>
           </div>
         </div>
       </div>
