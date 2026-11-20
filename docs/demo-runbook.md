@@ -34,7 +34,7 @@ Open **http://127.0.0.1:3000** (use `127.0.0.1`; `localhost:3000` can hit anothe
 ## 3. Demo script (about 3 minutes)
 
 1. **Add prospect**: a real public company works best, e.g. *Satya Nadella, CEO, Microsoft, microsoft.com*.
-2. Research starts automatically; the status changes in a few seconds to **Ready** or **Needs review** (partial).
+2. Click **Prepare brief** (or **Prepare missing briefs** for the whole list). In a few seconds the status changes to **Ready** or **Needs review** (partial).
 3. Open the briefing: summary, cited facts (each with its source), questions, and what is uncertain. The **Live research** label means real sources; **Sample data** means a built-in fictional sample.
 4. Click **Pop out briefing** (Chrome or Edge): a small window that stays on top of any app, e.g. your dialer. Move it beside the call.
 5. Click **Call connected**, then end the call and pick an outcome.
