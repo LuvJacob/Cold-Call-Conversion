@@ -83,16 +83,18 @@ def _run(prospect, llm, search, profiles, budget, today, mode, rec) -> Briefing:
     what is missing instead of raising.
     """
     today = today or date.today()
-    # Split the search budget so the two researchers together never exceed it.
+    # Split the search, lookup and extraction budgets so the two researchers together never exceed it.
     person_budget = replace(
         budget,
         max_searches=(budget.max_searches + 1) // 2,
         max_profile_lookups=(budget.max_profile_lookups + 1) // 2,
+        max_extraction_calls=(budget.max_extraction_calls + 1) // 2,
     )
     company_budget = replace(
         budget,
         max_searches=budget.max_searches // 2,
         max_profile_lookups=budget.max_profile_lookups // 2,
+        max_extraction_calls=budget.max_extraction_calls // 2,
     )
 
     pool = ThreadPoolExecutor(max_workers=2)

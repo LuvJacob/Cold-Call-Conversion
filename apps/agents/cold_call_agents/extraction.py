@@ -543,9 +543,9 @@ def is_real_llm(llm: Optional[LLMClient]) -> bool:
 class Extractor:
     """Extracts claims from search results; holds the LLM call budget.
 
-    `max_calls` is per researcher: the person and the company researcher each
-    build their own Extractor, so the effective cap is 2x per briefing until
-    the orchestrator splits `Budget.max_extraction_calls` between them.
+    `max_calls` is this researcher's share: the orchestrator splits
+    `Budget.max_extraction_calls` between the person and company researchers,
+    so the total per briefing never exceeds it.
     """
 
     llm: Optional[LLMClient]
