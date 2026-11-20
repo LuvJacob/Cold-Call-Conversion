@@ -26,7 +26,7 @@ test("prospect entry, preparation, active-call recovery, outcome and deletion", 
     page.getByRole("heading", { name: "Jamie Test", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Prepare sample brief", exact: true })
+    .getByRole("button", { name: "Prepare brief", exact: true })
     .click();
   await expect(
     page.getByText("No live company research has been performed.", {
