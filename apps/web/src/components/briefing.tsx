@@ -48,7 +48,7 @@ export function BriefOverview({
         <div className="preparation-progress" role="status">
           <RefreshCw size={16} className="spin" />
           <div>
-            <strong>Preparing a sample briefing</strong>
+            <strong>Preparing the briefing</strong>
             <span>
               Simulated research. No external sources are being contacted.
             </span>
@@ -123,13 +123,13 @@ export function BriefOverview({
           <Search size={24} strokeWidth={1.5} />
           <h3>A little research goes a long way.</h3>
           <p>
-            Prepare a sample briefing to explore the workflow. Your notes are
+            Prepare a briefing to explore the workflow. Your notes are
             available right now.
           </p>
           {onResearch && (
             <Button variant="secondary" small onClick={onResearch}>
               <RefreshCw size={14} />
-              Prepare sample brief
+              Prepare brief
             </Button>
           )}
         </div>

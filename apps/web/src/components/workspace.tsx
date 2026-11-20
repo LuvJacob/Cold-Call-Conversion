@@ -191,7 +191,7 @@ export default function Workspace({
       dispatch({ type: "save-prospect", prospect: { ...editing, ...input } });
       setSelectedId(editing.id);
       setNotice(
-        "Prospect updated. Prepare a new sample brief when you’re ready.",
+        "Prospect updated. Prepare a new brief when you’re ready.",
       );
     } else {
       const p = makeProspect(input, targetList);
@@ -759,7 +759,7 @@ export default function Workspace({
                         {base.length
                           ? "Try another name, company, or preparation filter."
                           : view === "library"
-                            ? "Prepare a sample briefing from your calling workspace to see it here."
+                            ? "Prepare a briefing from your calling workspace to see it here."
                             : "Add a prospect or import a CSV to build this calling list."}
                       </EmptyState>
                     )}
@@ -783,7 +783,7 @@ export default function Workspace({
                   {!!running && (
                     <p className="queue-working" role="status">
                       <span className="status-dot" />
-                      Preparing {running} sample briefing
+                      Preparing {running} briefing
                       {running === 1 ? "" : "s"}…
                     </p>
                   )}
