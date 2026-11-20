@@ -20,6 +20,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Brief, Outcome, Prospect } from "@/lib/model";
+
+const isSample = (b: Pick<Brief, "mode"> | null | undefined) =>
+  !b || b.mode === "demo";
+const modeTag = (b: Pick<Brief, "mode"> | null | undefined) =>
+  isSample(b) ? "Sample" : "Live research";
 import { BriefingPopout } from "./briefing-popout";
 import { Avatar, Button, EmptyState, IconButton, ResearchBadge } from "./ui";
 
@@ -70,7 +75,7 @@ export function BriefOverview({
             <div className="section-label">
               <Building2 size={15} />
               <h3>The company, in context</h3>
-              <span className="tiny-label">Sample</span>
+              <span className="tiny-label">{modeTag(brief)}</span>
             </div>
             <p className="company-summary">{brief.summary}</p>
             <div className="fact-list">
@@ -83,7 +88,8 @@ export function BriefOverview({
                     {onSources && (
                       <button className="source-reference" onClick={onSources}>
                         <FileText size={11} />
-                        Demo source{fact.sourceIds.length > 1 ? "s" : ""}{" "}
+                        {isSample(brief) ? "Demo source" : "Source"}
+                        {fact.sourceIds.length > 1 ? "s" : ""}{" "}
                         {fact.sourceIds
                           .map(
                             (id) =>
@@ -163,7 +169,7 @@ export function BriefOverview({
           </section>
           <p className="prepared-time">
             <Clock3 size={12} />
-            Sample prepared{" "}
+            {isSample(brief) ? "Sample prepared" : "Prepared"}{" "}
             {new Date(brief.preparedAt).toLocaleString(undefined, {
               month: "short",
               day: "numeric",
@@ -206,8 +212,9 @@ function Sources({ brief }: { brief: Brief | null }) {
       <div className="callout callout-neutral">
         <ShieldCheck size={17} />
         <p>
-          These are fictional sample documents, not live research. Source URLs
-          will appear here when the backend is connected.
+          {isSample(brief)
+            ? "These are fictional sample documents, not live research. Source URLs will appear here when the backend is connected."
+            : "Sources gathered during research. Check each one before relying on it."}
         </p>
       </div>
       {brief.sources.map((source, index) => (
@@ -218,7 +225,7 @@ function Sources({ brief }: { brief: Brief | null }) {
               <h3>{source.title}</h3>
               <p>{source.publisher}</p>
             </div>
-            <span className="tiny-label">Sample</span>
+            <span className="tiny-label">{modeTag(brief)}</span>
           </div>
           <p className="source-excerpt">{source.excerpt}</p>
           {source.url && /^https?:\/\//.test(source.url) && (
@@ -517,7 +524,7 @@ export function OnCall({
           <div className="section-label">
             <Building2 size={17} />
             <h2>Company context</h2>
-            <span className="tiny-label">Sample</span>
+            <span className="tiny-label">{modeTag(prospect.brief)}</span>
           </div>
           <p>
             {prospect.brief?.summary ||

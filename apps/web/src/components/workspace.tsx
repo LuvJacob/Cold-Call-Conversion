@@ -26,13 +26,14 @@ import {
   X,
 } from "lucide-react";
 import {
+  briefLabel,
   makeProspect,
   prospectKey,
   type Outcome,
   type Prospect,
   type ProspectInput,
 } from "@/lib/model";
-import { useWorkspace } from "@/lib/use-workspace";
+import { useWorkspace, type DataMode } from "@/lib/use-workspace";
 import {
   Avatar,
   Button,
@@ -65,7 +66,12 @@ const outcomes: Record<Outcome, string> = {
   "no-answer": "No answer",
 };
 
-export default function Workspace() {
+export default function Workspace({
+  dataMode = "demo",
+}: {
+  dataMode?: DataMode;
+}) {
+  const workspace = useWorkspace(dataMode);
   const {
     state,
     dispatch,
@@ -75,7 +81,8 @@ export default function Workspace() {
     savingAllowed,
     reset,
     retrySave,
-  } = useWorkspace();
+  } = workspace;
+  const isApi = workspace.mode === "api";
   const [listId, setListId] = useState("list-outreach");
   const [selectedId, setSelectedId] = useState("p-maya");
   const [view, setView] = useState<"workspace" | "library">("workspace");
@@ -162,7 +169,9 @@ export default function Workspace() {
   function research(ids: string[]) {
     dispatch({ type: "research-start", ids });
     setNotice(
-      `Preparing ${ids.length === 1 ? "a sample briefing" : `${ids.length} sample briefings`}. No live research is performed.`,
+      isApi
+        ? `Researching ${ids.length === 1 ? "1 prospect" : `${ids.length} prospects`}. Briefings appear here when ready.`
+        : `Preparing ${ids.length === 1 ? "a sample briefing" : `${ids.length} sample briefings`}. No live research is performed.`,
     );
   }
   function saveProspect(input: ProspectInput) {
@@ -186,8 +195,14 @@ export default function Workspace() {
       );
     } else {
       const p = makeProspect(input, targetList);
-      dispatch({ type: "add-prospects", prospects: [p] });
-      setSelectedId(p.id);
+      if (workspace.mode === "api") {
+        void workspace
+          .createProspects(targetList, [input])
+          .then((created) => created[0] && setSelectedId(created[0].id));
+      } else {
+        dispatch({ type: "add-prospects", prospects: [p] });
+        setSelectedId(p.id);
+      }
       setNotice(`${p.name} added to ${currentList.name}.`);
     }
     setView("workspace");
@@ -386,9 +401,19 @@ export default function Workspace() {
               <span
                 className={storageWarning ? "status-dot warning" : "status-dot"}
               />
-              {storageWarning ? "Session only" : "Saved in this browser"}
+              {storageWarning
+                ? isApi
+                  ? "Connection issue"
+                  : "Session only"
+                : isApi
+                  ? "Saved to server"
+                  : "Saved in this browser"}
               <span className="topbar-divider" />
-              <span className="demo-pill">DEMO</span>
+              <span className="demo-pill">
+                {isApi
+                  ? (briefLabel(selected?.brief) ?? "Live workspace")
+                  : "DEMO"}
+              </span>
             </div>
           </header>
           {storageWarning && (
@@ -406,18 +431,20 @@ export default function Workspace() {
               </Button>
             </div>
           )}
-          <div className="demo-banner">
-            <span className="demo-banner-icon">
-              <FileText size={13} />
-            </span>
-            <p>
-              <strong>A working preview.</strong> Fictional sample data and
-              simulated research. Your changes stay in this browser.
-            </p>
-            <button onClick={() => setDialog({ type: "help" })}>
-              How it works <ArrowUpRightIcon />
-            </button>
-          </div>
+          {!isApi && (
+            <div className="demo-banner">
+              <span className="demo-banner-icon">
+                <FileText size={13} />
+              </span>
+              <p>
+                <strong>A working preview.</strong> Fictional sample data and
+                simulated research. Your changes stay in this browser.
+              </p>
+              <button onClick={() => setDialog({ type: "help" })}>
+                How it works <ArrowUpRightIcon />
+              </button>
+            </div>
+          )}
           {active && state.activeCall ? (
             <OnCall
               prospect={active}
@@ -886,9 +913,11 @@ export default function Workspace() {
               </div>
               <footer className="workspace-footer">
                 <span>Built for the conversation ahead.</span>
-                <button onClick={() => setDialog({ type: "reset" })}>
-                  Reset demo workspace
-                </button>
+                {!isApi && (
+                  <button onClick={() => setDialog({ type: "reset" })}>
+                    Reset demo workspace
+                  </button>
+                )}
               </footer>
             </main>
           )}
@@ -929,11 +958,22 @@ export default function Workspace() {
           existing={state.prospects}
           capacity={1000 - state.prospects.length}
           onClose={() => setDialog(null)}
-          onImport={(prospects, duplicates) => {
-            dispatch({ type: "add-prospects", prospects });
-            chooseList(currentList.id);
-            setSelectedId(prospects[0]?.id ?? "");
+          onImport={(prospects, duplicates, file) => {
+            const listId = currentList.id;
+            chooseList(listId);
             setDialog(null);
+            if (workspace.mode === "api" && file) {
+              void workspace.importCsv(listId, file).then((r) => {
+                if (!r) return;
+                setSelectedId(r.imported[0]?.id ?? "");
+                setNotice(
+                  `Imported ${r.imported.length} prospects.${r.duplicatesSkipped ? ` Skipped ${r.duplicatesSkipped} duplicates.` : ""}`,
+                );
+              });
+              return;
+            }
+            dispatch({ type: "add-prospects", prospects });
+            setSelectedId(prospects[0]?.id ?? "");
             setNotice(
               `Imported ${prospects.length} prospects.${duplicates ? ` Skipped ${duplicates} duplicates.` : ""}`,
             );
@@ -949,10 +989,18 @@ export default function Workspace() {
               dispatch({ type: "rename-list", id: currentList.id, name });
               setNotice("Calling list renamed.");
             } else {
-              const id = crypto.randomUUID();
-              dispatch({ type: "add-list", id, name });
-              chooseList(id);
-              setNotice("Calling list created. Add your first prospect.");
+              if (workspace.mode === "api") {
+                void workspace.createList(name).then((id) => {
+                  if (!id) return;
+                  chooseList(id);
+                  setNotice("Calling list created. Add your first prospect.");
+                });
+              } else {
+                const id = crypto.randomUUID();
+                dispatch({ type: "add-list", id, name });
+                chooseList(id);
+                setNotice("Calling list created. Add your first prospect.");
+              }
             }
             setDialog(null);
           }}

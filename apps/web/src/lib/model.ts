@@ -15,7 +15,8 @@ export const sourceSchema = z.object({
     .nullable(),
 });
 export const briefSchema = z.object({
-  mode: z.literal("demo"),
+  // "demo" is sample data; any other value (e.g. "free", "live") is real research.
+  mode: z.string().min(1).max(40),
   preparedAt: z.string().datetime(),
   summary: z.string(),
   facts: z.array(
@@ -31,6 +32,8 @@ export const briefSchema = z.object({
   uncertainty: z.array(z.string()),
 });
 export type Brief = z.infer<typeof briefSchema>;
+export const briefLabel = (b: Pick<Brief, "mode"> | null | undefined) =>
+  !b ? null : b.mode === "demo" ? "Sample data" : "Live research";
 export const prospectInputSchema = z.object({
   name: z
     .string()
@@ -41,6 +44,7 @@ export const prospectInputSchema = z.object({
   role: z.string().trim().min(1, "Enter a job title.").max(160),
   phone: z.string().trim().max(80),
   notes: z.string().max(4000, "Keep notes under 4,000 characters."),
+  companyDomain: z.string().trim().max(300).nullish(),
 });
 export type ProspectInput = z.infer<typeof prospectInputSchema>;
 export const prospectSchema = prospectInputSchema.extend({

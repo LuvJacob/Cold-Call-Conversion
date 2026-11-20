@@ -32,3 +32,14 @@ Frontend research status and call status are independent. Call Connected display
 6. Run the existing workflow tests against the integration and add ownership/authorization checks at the backend.
 
 No auth UI, API keys, direct model calls, database schema, or production authorization behavior is implied by this frontend demo.
+
+## Status: API mode (implemented)
+
+Set `NEXT_PUBLIC_DATA_MODE=api` (server env `DATA_MODE` also works; it is read at request time, so no rebuild is needed) to use the backend instead of localStorage and the simulator. Default is `demo`, which keeps the offline sample behaviour unchanged.
+
+- `src/app/api/[...path]/route.ts` proxies GET/POST/PATCH/DELETE to `${API_BASE_URL}/v1/...` (`/api/healthz` maps to `/healthz`), adds `X-Seller-ID: ${DEMO_SELLER_ID:-demo-seller}` server-side (dev auth only), forwards only content-type, accept and idempotency-key, and does not log bodies.
+- `src/lib/api.ts` is the client; `src/lib/use-api-workspace.ts` loads `/v1/workspace`, runs mutations one at a time, refreshes after each, and polls `/v1/prospects/{id}/research` every 2.5s while any prospect is running (stops on unmount). `queued` and `running` both show as running; a revision mismatch just triggers a refresh, so stale results never overwrite an edited prospect.
+- Brief `mode`: `demo` shows "Sample data"; any other value shows "Live research".
+- CSV import uses `POST /v1/lists/{id}/import` with the chosen file; the dialog's preview still uses the client parser.
+- Errors appear in the existing warning banner; "Retry saving" reloads the workspace. The reset-demo action and demo banner are hidden in API mode.
+- Production auth (JWT) is not wired: the proxy only sends the dev seller header.

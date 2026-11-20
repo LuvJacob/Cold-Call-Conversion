@@ -87,6 +87,19 @@ export function ProspectDialog({
         </div>
         <label className="field">
           <span>
+            Company website <span className="muted">· optional</span>
+          </span>
+          <input
+            name="companyDomain"
+            defaultValue={prospect?.companyDomain ?? ""}
+            placeholder="e.g. acme.com"
+            autoComplete="off"
+            maxLength={300}
+          />
+          <small>Helps research find the right company.</small>
+        </label>
+        <label className="field">
+          <span>
             Your notes <span className="muted">· optional</span>
           </span>
           <textarea
@@ -214,7 +227,11 @@ export function ImportDialog({
   existing: Prospect[];
   capacity: number;
   onClose: () => void;
-  onImport: (prospects: Prospect[], duplicates: number) => void;
+  onImport: (
+    prospects: Prospect[],
+    duplicates: number,
+    file: File | null,
+  ) => void;
 }) {
   const [result, setResult] = useState<CsvResult | null>(null);
   const [filename, setFilename] = useState("");
@@ -222,6 +239,7 @@ export function ImportDialog({
   const [loading, setLoading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const request = useRef(0);
+  const chosen = useRef<File | null>(null);
   const keys = new Set(existing.map(prospectKey));
   let duplicates = 0;
   const additions = (result?.rows ?? []).filter((p) => {
@@ -236,6 +254,7 @@ export function ImportDialog({
   async function readFile(file?: File) {
     if (!file) return;
     const ticket = ++request.current;
+    chosen.current = file;
     setFileError("");
     setResult(null);
     setFilename(file.name);
@@ -401,6 +420,7 @@ export function ImportDialog({
             onImport(
               additions.map((p) => makeProspect(p, listId)),
               duplicates,
+              chosen.current,
             )
           }
         >

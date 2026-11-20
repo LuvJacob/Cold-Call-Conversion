@@ -8,10 +8,11 @@ import {
   STORAGE_KEY,
 } from "./model";
 import { createDemoBrief } from "./sample-data";
+import { useApiWorkspace } from "./use-api-workspace";
 
 // Lane D demo boundary: replace storage and this simulator with Lane C's
 // agreed API. Screen components never call an AI provider directly.
-export function useWorkspace() {
+export function useDemoWorkspace() {
   const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
   const [loaded, setLoaded] = useState(false);
   const [storageWarning, setStorageWarning] = useState("");
@@ -150,6 +151,7 @@ export function useWorkspace() {
     dispatch({ type: "reset" });
   };
   return {
+    mode: "demo" as const,
     state,
     dispatch,
     loaded,
@@ -159,4 +161,13 @@ export function useWorkspace() {
     reset,
     retrySave: () => setSaveAttempt((n) => n + 1),
   };
+}
+
+export type DataMode = "demo" | "api";
+// The mode is fixed for the lifetime of the page (chosen on the server), so
+// the hook order never changes between renders.
+export function useWorkspace(mode: DataMode = "demo") {
+  const demo = mode === "demo";
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return demo ? useDemoWorkspace() : useApiWorkspace();
 }
