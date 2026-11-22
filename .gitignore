@@ -12,3 +12,7 @@ __pycache__/
 *.egg-info/
 .venv/
 .pytest_cache/
+
+# Large media (demo videos live on YouTube, not in the repo)
+*.mp4
+*.mov
