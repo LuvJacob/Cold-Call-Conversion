@@ -135,6 +135,23 @@ async def _record_failure(repo: StorageRepository, job: ResearchJobModel, messag
 _DETERMINISTIC_ERRORS = (ValidationError, TypeError, KeyError, AttributeError, AssertionError)
 
 
+_slots: dict[int, asyncio.Semaphore] = {}  # one semaphore per running event loop
+
+
+def _research_slot() -> asyncio.Semaphore:
+    """Limit concurrent research jobs (RESEARCH_MAX_CONCURRENCY, default 2).
+    BackgroundTasks runs async jobs on the event loop, so an asyncio.Semaphore is the right primitive."""
+    loop_id = id(asyncio.get_running_loop())
+    if loop_id not in _slots:
+        try:
+            limit = max(1, int(os.environ.get("RESEARCH_MAX_CONCURRENCY", "2")))
+        except ValueError:
+            limit = 2
+        _slots.clear()  # a new loop means the old one is gone
+        _slots[loop_id] = asyncio.Semaphore(limit)
+    return _slots[loop_id]
+
+
 def backoff_seconds(attempt: int, base: float, rand: Callable[[], float] | None = None) -> float:
     """Exponential backoff after failed attempt number `attempt` (1-based): base * 2^(attempt-1),
     jittered by +/-25% and capped at 5 minutes."""
@@ -153,20 +170,23 @@ async def process_job(
     prospect edited during backoff is never researched or overwritten with stale data.
     """
     while True:
-        if job.status == ResearchStatusEnum.QUEUED:
-            claimed = await repo.claim_research_job(
-                "background", lease_seconds=settings.research_lease_seconds, job_id=job.id
-            )
-            if claimed is None:
-                logger.info("Job %s already claimed or finished; skipping", job.id)
+        # Hold a slot only while claiming and running (not while waiting or backing off), so the lease
+        # starts when work starts and a big batch cannot burst the free sources.
+        async with _research_slot():
+            if job.status == ResearchStatusEnum.QUEUED:
+                claimed = await repo.claim_research_job(
+                    "background", lease_seconds=settings.research_lease_seconds, job_id=job.id
+                )
+                if claimed is None:
+                    logger.info("Job %s already claimed or finished; skipping", job.id)
+                    return
+                job = claimed
+            try:
+                await _run_job(repo, job)
                 return
-            job = claimed
-        try:
-            await _run_job(repo, job)
-            return
-        except Exception as exc:
-            logger.exception("Research failed for prospect %s (attempt %d)", job.prospectId, job.attempts)
-            deterministic = isinstance(exc, _DETERMINISTIC_ERRORS)
+            except Exception as exc:
+                logger.exception("Research failed for prospect %s (attempt %d)", job.prospectId, job.attempts)
+                deterministic = isinstance(exc, _DETERMINISTIC_ERRORS)
 
         if (
             deterministic
