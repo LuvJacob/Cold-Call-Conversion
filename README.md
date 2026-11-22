@@ -8,6 +8,7 @@ An agentic AI sales assistant that researches prospects before the call, so B2B 
 - **Problem and solution statement:** [docs/submission/problem-and-solution.md](docs/submission/problem-and-solution.md)
 - **Technology statement (IBM Bob):** [docs/submission/technology-statement.md](docs/submission/technology-statement.md)
 - **Run the demo yourself:** [docs/demo-runbook.md](docs/demo-runbook.md)
+- **watsonx Orchestrate package:** [orchestrate/](orchestrate/) (agent + `research_prospect` tool)
 
 ## Project status
 
