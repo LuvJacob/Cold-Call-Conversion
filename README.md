@@ -2,6 +2,13 @@
 
 An agentic AI sales assistant that researches prospects before the call, so B2B sellers know who they're calling before the conversation begins.
 
+## Hackathon submission (IBM SkillsBuild AI Experiential Learning Lab)
+
+- **Demo video (2 min):** [docs/submission/cold-call-conversion-demo.mp4](docs/submission/cold-call-conversion-demo.mp4)
+- **Problem and solution statement:** [docs/submission/problem-and-solution.md](docs/submission/problem-and-solution.md)
+- **Technology statement (IBM Bob):** [docs/submission/technology-statement.md](docs/submission/technology-statement.md)
+- **Run the demo yourself:** [docs/demo-runbook.md](docs/demo-runbook.md)
+
 ## Project status
 
 A browser-local frontend demo is available in `apps/web`. Product scope, team roles, and the challenge submission are defined. A rough low-fidelity MVP exists in a **separate repository**: [Cold-Call-Conversion-rx](https://github.com/LuvJacob/Cold-Call-Conversion-rx), which is used to demonstrate the core concept and guide the build here.
