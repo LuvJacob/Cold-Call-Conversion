@@ -1,27 +1,27 @@
 # Problem and Solution Statement
 
-## The problem
+## The problem: a productivity drain for reps and sales teams
 
-B2B sales development reps (SDRs and BDRs) make dozens of cold calls a day to people they know almost nothing about. When a call connects, they have about ten seconds to show they understand the prospect's role, company and priorities. Doing that homework properly means searching LinkedIn, company sites, filings and news for every name on a list, which takes far longer than reps have. So prep either eats hours of the day or doesn't happen at all, and calls open generic and end fast.
+B2B sales development reps (SDRs and BDRs) make dozens of cold calls a day to people they know almost nothing about. When a call connects, they have about ten seconds to show they understand the prospect's role, company and priorities. Researching every name takes far longer than reps have, so prep either eats hours of their day or doesn't happen.
 
-The research that does happen is often unreliable: outdated, mixed up between people with the same name, or never checked. A rep who repeats a wrong fact loses trust in the first sentence. And during the call, useful context is buried in browser tabs when the prospect brings up budget, a renewal or a competitor.
+That is a personal productivity problem for every rep and a team productivity problem for sales managers: time spent researching isn't spent talking to customers, prep quality varies from rep to rep, and research is repeated when two people call the same account. And a wrong fact loses trust in the first sentence.
 
-## Our solution
+## Our solution: Cold Call Conversion
 
-Cold Call Conversion is an AI pre-call research assistant that does the homework before the call and helps during it.
+An AI pre-call research assistant, built with IBM watsonx, that does the homework before the call and helps during it.
 
-1. **Load a calling list.** Reps add prospects or import a CSV; everything is saved on the server.
-2. **AI agents research each prospect in the background.** An orchestrator agent sends person and company research to sub-agents. They pull from approved public sources (SEC EDGAR filings, Wikidata, Wikipedia and the company's own website), with paid search and enrichment providers ready to plug in.
-3. **Every fact is verified and cited.** A verifier cross-checks findings, ties every fact to its source, flags single-source facts as "unconfirmed", lists what is missing or out of date, and drops anything it cannot confirm. Guardrails reject wrong-person matches, past roles, hedged claims and prompt-injection text. A thinner briefing beats an invented fact.
-4. **The briefing is on screen when the call connects.** A prospect carousel shows a summary, cited facts, suggested opening questions and the uncertainty list. A pop-out window keeps the briefing on top of any dialer or CRM.
-5. **Optional live call transcript.** With the seller's consent, the app transcribes the call in the browser and shows cue chips when the prospect mentions pricing, a contract, a competitor or a timeline, linking each to a related question or fact from the briefing. No audio is saved, and nothing is sent to our backend.
-6. **Log the outcome and move on.** Reps record the call result and go straight to the next prepared lead.
+1. **Load a calling list.** Reps add prospects or import a CSV; lists are shared on the server.
+2. **AI agents research in the background.** An orchestrator agent sends person and company research to sub-agents that gather approved public sources: SEC EDGAR filings, Wikidata, Wikipedia and the company's own website.
+3. **IBM Granite on watsonx.ai turns sources into facts.** Granite reads each source and extracts structured facts (current role, company size, headquarters, recent news), each tied to the exact sentence it came from. Granite also writes the briefing summary and suggested opening questions.
+4. **Verification keeps it honest.** Every Granite-extracted fact must quote its source verbatim, and our verifier cross-checks facts across sources, flags single-source facts as "unconfirmed", lists what is missing or stale, and drops anything it cannot confirm. If watsonx is unavailable, the system falls back to template wording, never invented facts.
+5. **watsonx Orchestrate brings it into the seller's workflow.** The same research pipeline is packaged as a watsonx Orchestrate tool and agent, so a seller can ask "prepare me for a call with…" and get the cited briefing.
+6. **Ready when the call connects.** The cited briefing is on screen, with a pop-out window over any dialer or CRM.
+7. **Optional live transcript.** With consent, the app transcribes the call in the browser and shows cues when the prospect mentions pricing, a contract or a competitor, linking each to a relevant question from the briefing. No audio is saved.
+8. **Log the outcome** and move straight to the next prepared lead.
 
-## Impact
+## Productivity impact
 
-- **Less prep time:** research runs in the background in seconds per prospect instead of minutes of manual searching.
-- **Better conversations:** reps open with a relevant, specific point and have the right question ready when the prospect raises a topic.
-- **Trust:** every fact links to its source, and the assistant says when it isn't sure instead of guessing.
-- **Responsible by design:** only approved public sources, no private personal data, consent before transcription and no stored audio.
+- **Personal:** reps reclaim the minutes they spent researching each prospect, because research for a whole list runs in the background, and they start every call with a specific, sourced point.
+- **Team:** every rep gets the same verified prep quality, briefings are cached and shared so accounts aren't researched twice, and managers can scale outreach without adding research hours.
 
-We measure success by prep time saved, briefing usefulness and source coverage, and 21 offline evaluation scenarios check every change automatically.
+We measure success by prep time saved, briefing usefulness and source coverage, with 21 automated evaluation scenarios checking every change.
