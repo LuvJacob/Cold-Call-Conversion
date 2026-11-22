@@ -4,7 +4,7 @@ An agentic AI sales assistant that researches prospects before the call, so B2B 
 
 ## Hackathon submission (IBM SkillsBuild AI Experiential Learning Lab)
 
-- **Demo video (2 min):** YouTube link to be added
+- **Demo video (2 min):** https://youtu.be/x4j-5h3y3kw
 - **Problem and solution statement:** [docs/submission/problem-and-solution.md](docs/submission/problem-and-solution.md)
 - **Technology statement (IBM Bob):** [docs/submission/technology-statement.md](docs/submission/technology-statement.md)
 - **Run the demo yourself:** [docs/demo-runbook.md](docs/demo-runbook.md)
