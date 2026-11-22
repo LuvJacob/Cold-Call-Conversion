@@ -83,6 +83,14 @@ class EdgarSource:
         want = normalize_company(company)
         named = {int(r["cik_str"]): str(r.get("title", "")) for r in rows if want and normalize_company(str(r.get("title", ""))) == want}
         name_cik = next(iter(named)) if len(named) == 1 else None
+        if name_cik is None:
+            # Acronym names typed in capitals ("IBM") are often the stock ticker while the SEC
+            # title is the long form ("INTERNATIONAL BUSINESS MACHINES CORP"). Exact, unique match only.
+            sym = company.strip()
+            if 2 <= len(sym) <= 5 and sym.isascii() and sym.isalnum() and sym.isupper():
+                by_ticker = {int(r["cik_str"]) for r in rows if str(r.get("ticker", "")) == sym}
+                if len(by_ticker) == 1:
+                    name_cik = next(iter(by_ticker))
         cik: Optional[int] = None
         if cik_hint and cik_hint.isdigit():
             if any(int(r["cik_str"]) == int(cik_hint) for r in rows):
