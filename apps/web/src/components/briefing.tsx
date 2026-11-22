@@ -25,6 +25,7 @@ const isSample = (b: Pick<Brief, "mode"> | null | undefined) =>
   !b || b.mode === "demo";
 const modeTag = (b: Pick<Brief, "mode"> | null | undefined) =>
   isSample(b) ? "Sample" : "Live research";
+import { LiveTranscript } from "./live-transcript";
 import { BriefingPopout } from "./briefing-popout";
 import { Avatar, Button, EmptyState, IconButton, ResearchBadge } from "./ui";
 
@@ -482,8 +483,8 @@ export function OnCall({
           {prospect.phone || "No phone added"}
         </p>
         <div className="manual-call-note">
-          Manual call state. This app does not dial, listen, record, or
-          transcribe.
+          Manual call state. This app does not dial or record. Live transcript
+          is optional and stays off until you start it.
         </div>
       </header>
       <div
@@ -544,6 +545,7 @@ export function OnCall({
           )}
         </section>
       </div>
+      <LiveTranscript brief={prospect.brief} />
       <footer className="on-call-footer">
         <div>
           <span className="eyebrow">WHEN YOU’RE FINISHED</span>
