@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import threading
 import time
 from dataclasses import dataclass
@@ -20,7 +21,8 @@ import httpx
 
 # Wikimedia policy wants a way to reach the operator; this is the public repo, not a person.
 DEFAULT_USER_AGENT = "ColdCallConversion/0.1 (https://github.com/LuvJacob/Cold-Call-Conversion; research prototype)"
-RETRY_STATUSES = (429, 500, 502, 503, 504)
+RETRY_STATUSES = (429, 500, 502, 503, 504)  # other 4xx are never retried
+MAX_RETRY_WAIT = 5.0
 # Minimum seconds between requests to a host (SEC allows 10/s; we stay far below).
 _MIN_INTERVAL = {"www.sec.gov": 0.25, "data.sec.gov": 0.25, "www.wikidata.org": 0.15, "en.wikipedia.org": 0.15}
 
@@ -69,7 +71,7 @@ class HttpClient:
         deadline_seconds: Optional[float] = None,
         timeout: float = 5.0,
         max_retries: int = 2,
-        backoff: float = 0.5,
+        backoff: float = 1.0,
         user_agent: str = DEFAULT_USER_AGENT,
         transport: Optional[httpx.BaseTransport] = None,
         sleep: Callable[[float], None] = time.sleep,
@@ -156,11 +158,9 @@ class HttpClient:
             except (httpx.InvalidURL, ValueError) as exc:  # e.g. a hostile redirect Location
                 raise HttpError("invalid URL in response") from exc
             if resp.status in RETRY_STATUSES and attempt < self._max_retries:
-                delay = self._backoff * (2**attempt)
-                ra = resp.headers.get("retry-after", "")
-                if ra.isdigit():
-                    delay = float(ra)
-                self._sleep(min(delay, 5.0))
+                ra = resp.headers.get("retry-after", "").strip()
+                delay = float(ra) if ra.isdigit() else self._backoff * (2**attempt) + random.uniform(0, 0.25)
+                self._sleep(min(delay, MAX_RETRY_WAIT))
                 continue
             return resp
         raise HttpError("unreachable")  # pragma: no cover

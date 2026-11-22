@@ -36,7 +36,11 @@ class CompanyInfo:
 
 
 def _same_name(a: str, b: str) -> bool:
-    na, nb = normalize_company(a), normalize_company(b)
+    def norm(x: str) -> str:
+        n = normalize_company(x)
+        return n[4:] if n.startswith("the ") else n  # "The Home Depot" ~ "Home Depot"
+
+    na, nb = norm(a), norm(b)
     return bool(na) and na == nb
 
 
