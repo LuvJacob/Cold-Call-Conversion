@@ -75,15 +75,15 @@ export function LiveTranscript({
           <div>
             {listening ? (
               <>
-                <strong role="status" style={{ color: "#c62828" }}>
+                <strong role="status" className="live-listening">
                   ● Listening
                 </strong>{" "}
-                <button type="button" onClick={stop}>
+                <button type="button" className="button button-primary button-small" onClick={stop}>
                   Stop
                 </button>
               </>
             ) : (
-              <button type="button" disabled={!consent} onClick={start}>
+              <button type="button" className="button button-primary" disabled={!consent} onClick={start}>
                 Start listening
               </button>
             )}
@@ -92,15 +92,15 @@ export function LiveTranscript({
           <div
             ref={box}
             aria-live="polite"
-            style={{ maxHeight: 160, overflowY: "auto" }}
+            className="live-transcript-box"
           >
             {lines.map((l, i) => (
-              <p key={i}>{l}</p>
+              <p key={i} className="live-line">{l}</p>
             ))}
-            {interim && <p className="muted">{interim}</p>}
+            {interim && <p className="muted live-interim">{interim}</p>}
           </div>
           {cues.length > 0 && (
-            <ul aria-label="Conversation cues">
+            <ul aria-label="Conversation cues" className="live-cues">
               {cues.map((c) => (
                 <li key={c.hint}>
                   They mentioned {c.trigger} → {c.hint}
@@ -112,6 +112,7 @@ export function LiveTranscript({
             <div>
               <button
                 type="button"
+                className="button button-secondary button-small"
                 onClick={() => {
                   const fail = () =>
                     setStatus(
@@ -128,7 +129,7 @@ export function LiveTranscript({
               <span role="status"> {status}</span>
             </div>
           )}
-          <p className="muted" style={{ fontSize: 12 }}>
+          <p className="muted live-footnote">
             Transcribed by your browser&apos;s speech service. Audio isn&apos;t
             saved; the transcript stays on this screen.
           </p>
