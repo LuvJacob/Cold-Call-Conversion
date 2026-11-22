@@ -21,10 +21,13 @@ Frontend setup: [apps/web/README.md](apps/web/README.md). Backend setup: [apps/a
 
 | In the MVP | Not in the MVP |
 |---|---|
-| Prospect entry | Live transcription |
-| Pre-call enrichment | Call recording |
-| Briefings that link their sources | Automatic conversation analysis |
+| Prospect entry | Call recording (no audio is ever saved) |
+| Pre-call enrichment | AI conversation analysis (planned with IBM speech services) |
+| Briefings that link their sources | |
 | Manual call-status controls | |
+| Live call transcript (optional, consent first) with keyword cues from the briefing | |
+
+**Live transcript:** added to the MVP at the team lead's request. During a call the on-call view can transcribe the conversation with the browser's speech service (Chrome or Edge). It is off by default and needs a consent tick. No audio or transcript goes to our backend or storage. Keyword cues (pricing, timeline, competitor...) point to related questions and facts from the briefing; there is no AI analysis of the call yet.
 
 **Success measures:** preparation time, briefing usefulness, source coverage.
 
